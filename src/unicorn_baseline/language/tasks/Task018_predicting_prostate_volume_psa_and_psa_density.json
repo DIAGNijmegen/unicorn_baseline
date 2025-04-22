@@ -1,0 +1,14 @@
+{
+    "Task": "Predicting prostate volume, PSA, and PSA density",
+    "Type": "Regression",
+    "Description": "This task involves one of three possible predictions, which will be specified at the beginning of each case: (1) predicting prostate volume in cubic centimeters, (2) predicting Prostate-Specific Antigen (PSA), or (3) predicting prostate volume from the radiology report. If a range is given for prostate volume, calculate and use the average. PSA density may be mentioned, and is related to PSA and prostate volume via the formula: prostate volume = PSA / PSA density. Use this relationship if necessary to calculate the missing value.",
+    "Data_Path": "test.json",
+    "Input_Field": "text",
+    "Label_Field": "single_label_regression_target",
+    "Parser_Format": {
+        "single_label_regression": {
+            "type": "float",
+            "description": "The prostate volume in cubic centimeters or the PSA value or the PSA density value."
+        }
+    }
+}

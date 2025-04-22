@@ -1,0 +1,14 @@
+{
+    "Task": "Kidney Abnormality Presence",
+    "Type": "Classification",
+    "Description": "This task involves determining whether a radiology report mentions any abnormalities related to the kidneys. Abnormalities include renal cell carcinoma, angiomyolipoma, cysts, kidney stones, conjoined kidneys, cases with partial or full nephrectomy, and several other rare abnormalities. The output should be a binary classification: 1.0 if a kidney abnormality is mentioned, and 0.0 if it is not.",
+    "Data_Path": "test.json",
+    "Input_Field": "text",
+    "Label_Field": "single_label_binary_classification_target",
+    "Parser_Format": {
+        "single_label_binary_classification": {
+            "type": "float",
+            "description": "The final classification. 1.0 if a kidney abnormality is mentioned in the text, and 0.0 if it is not."
+        }
+    }
+}

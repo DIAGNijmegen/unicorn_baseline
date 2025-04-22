@@ -41,6 +41,10 @@ RUN apt-get update && curl -L ${ASAP_URL} -o /tmp/ASAP.deb && apt-get install --
     echo "/opt/ASAP/bin" > /usr/lib/python3/dist-packages/asap.pth && \
     rm -rf /var/lib/apt/lists/*
 
+# Install Ollama
+RUN curl -fsSL https://ollama.com/install.sh | sh
+ENV OLLAMA_MODELS=/opt/ml/model/
+
 # Switch to user
 USER user
 WORKDIR /opt/app/

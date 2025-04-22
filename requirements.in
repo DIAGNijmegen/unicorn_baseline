@@ -18,4 +18,5 @@ safetensors
 scipy
 SimpleITK
 Pillow
-llm_extractinator
+llm_extractinator==0.4.2
+dragon_baseline>=0.4.5

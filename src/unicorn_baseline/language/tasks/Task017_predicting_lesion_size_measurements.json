@@ -1,0 +1,30 @@
+{
+    "Task": "Predicting lesion size measurements",
+    "Type": "Regression",
+    "Description": "You will be provided with a radiology report and instructed to extract one of the following lesion size measurements, depending on the specific task stated at the beginning of each case: (1) PDAC size, (2) pulmonary nodule size, or (3) RECIST target lesion sizes. For PDAC or pulmonary nodule tasks, extract the lesion size in millimeters and assign it to lesion_1; set lesion_2 through lesion_5 to 0. For RECIST tasks, extract the size in millimeters for each described target lesion (up to 5), and assign them to lesion_1 through lesion_5 in the order they appear; set any remaining lesion values to 0 if fewer than 5 are described.",
+    "Data_Path": "test.json",
+    "Input_Field": "text",
+    "Label_Field": "multi_label_regression_target",
+    "Parser_Format": {
+        "lesion_1": {
+            "type": "float",
+            "description": "The estimated size of either the pancreatic ductal adenocarcinoma (PDAC), or the largest pulmonary nodule, or the first RECIST target lesion in millimeters."
+        },
+        "lesion_2": {
+            "type": "float",
+            "description": "The estimated size of the second RECIST target lesion in millimeters. If not described, set to 0."
+        },
+        "lesion_3": {
+            "type": "float",
+            "description": "The estimated size of the third RECIST target lesion in millimeters. If not described, set to 0."
+        },
+        "lesion_4": {
+            "type": "float",
+            "description": "The estimated size of the fourth RECIST target lesion in millimeters. If not described, set to 0."
+        },
+        "lesion_5": {
+            "type": "float",
+            "description": "The estimated size of the fifth RECIST target lesion in millimeters. If not described, set to 0."
+        }
+    }
+}
