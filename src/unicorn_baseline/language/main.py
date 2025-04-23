@@ -12,29 +12,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-"""
-The following is a simple example algorithm.
-
-It is meant to run within a container.
-
-To run it locally, you can call the following bash script:
-
-  ./do_test_run.sh
-
-This will start the inference and reads from ./test/input and writes to ./test/output
-
-To save the container and prep it for upload to Grand-Challenge.org you can call:
-
-  ./do_save.sh
-
-Any container that shows the same behaviour will do, this is purely an example of how one COULD do it.
-
-Reference the documentation to get details on the runtime environment on the platform:
-https://grand-challenge.org/documentation/runtime-environment/
-
-Happy programming!
-"""
-
 import json
 import time
 from pathlib import Path
@@ -44,9 +21,8 @@ import pandas as pd
 from dragon_baseline.main import DragonBaseline
 from llm_extractinator import extractinate
 
-INPUT_PATH = Path("/input")
-OUTPUT_PATH = Path("/output")
-RESOURCE_PATH = Path("resources")
+from unicorn_baseline.io import write_json_file
+from unicorn_baseline.language.task_definitions import TASK_DEFINITIONS
 
 
 def task16_preprocessing(text_parts):
@@ -93,7 +69,47 @@ def drop_keys_except(data: List, keys: List[str]) -> List:
     ]
 
 
-def post_process_predictions(data: json, task_config):
+def generate_task_definition(config: DragonBaseline):
+    """
+    Combines shared config and task-specific information.
+
+    Parameters:
+        config (DragonBaseline): Object with attributes: jobid, input_name
+
+    Returns:
+        dict: The full task definition
+    """
+    task_id = f"Task{int(config.jobid):03}"  # e.g., 12 -> "Task012"
+
+    if task_id not in TASK_DEFINITIONS:
+        raise ValueError(f"Unknown task ID: {task_id}")
+
+    base = TASK_DEFINITIONS[task_id].copy()
+    base.update(
+        {
+            "Input_Field": config.input_name,
+            "Data_Path": "test.json",
+        }
+    )
+    return base
+
+
+def generate_task_file(config: DragonBaseline, task_folder: Path):
+    """
+    Generates a task file based on the task ID and configuration.
+
+    Parameters:
+        task_id (str): e.g., "17"
+        config (dict): dict with keys: 'Input_Field', 'Label_Field', 'Data_Path'
+        output_path (Path): Path to save the generated task file
+    """
+    task_definition = generate_task_definition(config)
+    output_path = task_folder / f"Task{int(config.jobid):03}.json"
+    with open(output_path, "w") as f:
+        json.dump(task_definition, f, indent=4)
+
+
+def post_process_predictions(data: json, task_config: DragonBaseline):
     task_id = task_config.jobid
     prediction_name = task_config.target.prediction_name
     if prediction_name in (
@@ -135,7 +151,7 @@ def post_process_predictions(data: json, task_config):
     return data
 
 
-def run_language():
+def run_language(OUTPUT_PATH: Path) -> int:
     # Read the task configuration, few-shots and test data
     # We'll leverage the DRAGON baseline algorithm for this
     algorithm = DragonBaseline()
@@ -144,15 +160,20 @@ def run_language():
     task_config = algorithm.task
     few_shots = algorithm.df_train
     test_data = algorithm.df_test
-    basepath = Path("/opt/app/unicorn_baseline/src/unicorn_baseline/language/")
+    basepath = Path("/opt/app/workdir/language")
     setup_folder_structure(basepath, test_data)
     print(f"Task description: {task_config}")
 
     task_name = task_config.task_name
     task_id = task_config.jobid
 
+    generate_task_file(
+        config=task_config,
+        task_folder=basepath / "tasks",
+    )
+
     # Task specific preprocessing
-    if "Task16_" in task_name:
+    if task_name.startswith("Task16_"):
         test_data["text"] = test_data["text_parts"].apply(task16_preprocessing)
 
     # Perform data extraction
@@ -203,9 +224,3 @@ def run_language():
 
     print(f"Saved neural representation to {test_predictions_path}")
     return 0
-
-
-def write_json_file(*, location, content):
-    # Writes a json file
-    with open(location, "w") as f:
-        f.write(json.dumps(content, indent=4))
