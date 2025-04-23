@@ -43,7 +43,7 @@ RUN apt-get update && curl -L ${ASAP_URL} -o /tmp/ASAP.deb && apt-get install --
 
 # Install Ollama
 RUN curl -fsSL https://ollama.com/install.sh | sh
-ENV OLLAMA_MODELS=/opt/ml/model/
+ENV OLLAMA_MODELS=/opt/ml/model/phi4
 
 # Switch to user
 USER user
