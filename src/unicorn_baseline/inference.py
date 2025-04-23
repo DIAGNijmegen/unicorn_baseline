@@ -111,7 +111,7 @@ def run():
 
     # check if the task is image or text
     if (INPUT_PATH / "nlp-task-configuration.json").exists():
-        return run_language()
+        return run_language(OUTPUT_PATH)
     else:
         return run_vision_and_visionlanguage(INPUT_PATH, MODEL_PATH)
 
