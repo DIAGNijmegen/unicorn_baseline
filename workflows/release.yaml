@@ -26,15 +26,7 @@ jobs:
     - name: Install build tools
       run: |
         python -m pip install --upgrade pip
-        pip install build twine bumpver
-
-    # Step 4: Sync the version in the code with the Git tag (only for release).
-    - name: Sync version with Git tag
-      if: startsWith(github.ref, 'refs/tags/')
-      run: |
-        TAG_VERSION=${GITHUB_REF#refs/tags/v}
-        bumpver update --new-version $TAG_VERSION --no-commit --no-tag
-        echo "Version updated to $TAG_VERSION"
+        pip install build twine
 
     # Step 5: Build the Python package.
     - name: Build package
