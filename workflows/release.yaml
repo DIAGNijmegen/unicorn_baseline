@@ -28,11 +28,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install build twine
 
-    # Step 5: Build the Python package.
+    # Step 4: Build the Python package.
     - name: Build package
       run: python -m build
 
-    # Step 6: Publish the package to PyPI if the workflow is triggered by a published release (tag).
+    # Step 5: Publish the package to PyPI if the workflow is triggered by a published release (tag).
     - name: Publish to PyPI
       if: startsWith(github.ref, 'refs/tags/')
       env:
