@@ -29,13 +29,15 @@ def task16_preprocessing(text_parts):
     return "Roman numeral: " + text_parts[0] + "\n\nText:" + text_parts[1]
 
 
-def setup_folder_structure(basepath: Path, test_data: pd.DataFrame):
+def setup_folder_structure(
+    basepath: Path, test_data: pd.DataFrame, filename: str = "test"
+):
     basepath.mkdir(exist_ok=True)
     (basepath / "data").mkdir(exist_ok=True)
     (basepath / "output").mkdir(exist_ok=True)
     (basepath / "tasks").mkdir(exist_ok=True)
 
-    test_data.to_json(basepath / "data" / "test.json", orient="records")
+    test_data.to_json(basepath / "data" / f"{filename}.json", orient="records")
 
 
 def wait_for_predictions(
@@ -161,7 +163,7 @@ def run_language(OUTPUT_PATH: Path) -> int:
     few_shots = algorithm.df_train
     test_data = algorithm.df_test
     basepath = Path("/opt/app/workdir/language")
-    setup_folder_structure(basepath, test_data)
+    setup_folder_structure(basepath, test_data, filename="test")
     print(f"Task description: {task_config}")
 
     task_name = task_config.task_name
