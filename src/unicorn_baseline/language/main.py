@@ -32,7 +32,7 @@ def task16_preprocessing(text_parts):
 def setup_folder_structure(
     basepath: Path, test_data: pd.DataFrame, filename: str = "test"
 ):
-    basepath.mkdir(exist_ok=True)
+    basepath.mkdir(exist_ok=True, parents=True)
     (basepath / "data").mkdir(exist_ok=True)
     (basepath / "output").mkdir(exist_ok=True)
     (basepath / "tasks").mkdir(exist_ok=True)
