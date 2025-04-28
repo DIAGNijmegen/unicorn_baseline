@@ -9,4 +9,4 @@ repos:
     rev: '23.11.0'  # Use the latest commit on the master branch
     hooks:
       - id: black
-        args: ['slide2vec']
+        args: ['src/unicorn_baseline']
