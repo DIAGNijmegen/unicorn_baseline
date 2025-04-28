@@ -12,7 +12,7 @@ from PIL import Image
 from unicorn_baseline.io import resolve_image_path, write_json_file
 from unicorn_baseline.vision.pathology.feature_extraction import extract_features
 from unicorn_baseline.vision.pathology.models import TITAN
-from unicorn_baseline.vision.pathology.wsi import FilterParams, WholeSlideImage
+from unicorn_baseline.vision.pathology.wsi import FilterParams, TilingParams, WholeSlideImage
 
 
 def extract_coordinates(
@@ -23,6 +23,7 @@ def extract_coordinates(
     tile_size,
     overlap: float = 0.0,
     filter_params: FilterParams = None,
+    tiling_params: TilingParams = None,
     max_num_tile: Optional[int] = None,
     num_workers: int = 1,
 ):
@@ -58,6 +59,7 @@ def extract_coordinates(
         tile_size,
         overlap=overlap,
         filter_params=filter_params,
+        tiling_params=tiling_params,
         num_workers=num_workers,
     )
 
@@ -337,12 +339,14 @@ def run_pathology_vision_task(
         "batch_size": 32,
         "tile_size": 512,
         "filter_params": FilterParams(ref_tile_size=256, a_t=4, a_h=2, max_n_holes=8),
+        "tiling_params": TilingParams(drop_holes=False, tissue_thresh=0.25, use_padding=True),
     }
 
     detection_segmentation_config = {
         "batch_size": 1,
         "tile_size": 224,
-        "filter_params": FilterParams(ref_tile_size=256, a_t=1, a_h=1, max_n_holes=8),
+        "filter_params": FilterParams(ref_tile_size=64, a_t=1, a_h=1, max_n_holes=8),
+        "tiling_params": TilingParams(drop_holes=False, tissue_thresh=0.1, use_padding=True),
         "overlap": 0.5,
     }
 
@@ -370,6 +374,7 @@ def run_pathology_vision_task(
             num_workers=num_workers,
             max_num_tile=max_num_tile,
             filter_params=config["filter_params"],
+            tiling_params=config["tiling_params"],
         )
     )
 
