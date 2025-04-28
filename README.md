@@ -1,6 +1,8 @@
-# UNICORN Basline 🦄💻
+# UNICORN Basline 🦄
 
 This repository contains the baseline code for various tasks in the [UNICORN challenge](https://unicorn.grand-challenge.org/).
+
+[![PyPI version](https://img.shields.io/pypi/v/unicorn-baseline)](https://pypi.org/project/unicorn-baseline/)
 
 ## Repository Structure 🗂️
 
