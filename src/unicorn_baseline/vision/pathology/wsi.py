@@ -35,8 +35,11 @@ class TilingParams(NamedTuple):
     Parameters for tiling.
     """
 
+    spacing: float  # spacing at which to tile the slide, in microns per pixel
+    tile_size: int  # size of the tiles to extract, in pixels
+    overlap: float  # overlap between tiles
     drop_holes: bool  # whether to drop tiles that fall within holes
-    tissue_thresh: float  # minimum tissue percentage required for a tile
+    min_tissue_percentage: float  # minimum tissue percentage required for a tile
     use_padding: bool  # whether to use padding for tiles at the edges
 
 
@@ -64,8 +67,8 @@ class WholeSlideImage(object):
     def __init__(
         self,
         path: Path,
-        mask_path: Optional[Path] = None,
-        spacing: Optional[float] = None,
+        mask_path: Path | None = None,
+        spacing: float | None = None,
         downsample: int = 32,
         backend: str = "asap",
     ):
@@ -160,20 +163,15 @@ class WholeSlideImage(object):
             self._level_spacing_cache[level] = self.spacings[level]
         return self._level_spacing_cache[level]
 
-    def get_best_level_for_spacing(self, target_spacing: float, tolerance: float = 0.1):
+    def get_best_level_for_spacing(self, target_spacing: float):
         """
         Determines the best level in a multi-resolution image pyramid for a given target spacing.
 
-        This method identifies the optimal level in the image pyramid that most closely matches
-        the desired target spacing. If the closest natural spacing at a given level is within a
-        specified tolerance (as a percentage) of the target spacing, that level is selected, and
-        the natural spacing is used. Otherwise, the method selects the closest smaller spacing
-        available in the pyramid.
+        Ensures that the returned spacing is always smaller than or equal to the target spacing
+        to avoid upsampling.
 
         Args:
             target_spacing (float): Desired spacing.
-            tolerance (float, optional): The tolerance level (as a percentage of the target spacing)
-                                         within which a natural spacing is considered acceptable.
 
         Returns:
             level (int): Index of the best matching level in the image pyramid.
@@ -182,37 +180,27 @@ class WholeSlideImage(object):
         target_downsample = target_spacing / spacing
         level = self.get_best_level_for_downsample_custom(target_downsample)
         level_spacing = self.get_level_spacing(level)
-        # if level_spacing is bigger than target spacing but within tolerance, return this level
-        if abs(level_spacing - target_spacing) / target_spacing <= tolerance:
-            return level
-        # if level spacing is bigger than target spacing, find the next level with a smaller spacing
-        else:
-            if level_spacing > target_spacing:
-                while level > 0 and level_spacing > target_spacing and not abs(level_spacing - target_spacing) / target_spacing <= tolerance:
-                    level -= 1
-                    level_spacing = self.get_level_spacing(level)
-            assert (
-                level_spacing <= target_spacing or abs(level_spacing - target_spacing) / target_spacing <= tolerance
-            ), f"Could not find a level with spacing smaller than or equal to {target_spacing} or within a tolerance of {tolerance * 100}%"
-            return level
+
+        # ensure the returned spacing is smaller than or equal to the target_spacing
+        while level > 0 and level_spacing > target_spacing:
+            level -= 1
+            level_spacing = self.get_level_spacing(level)
+
+        assert (
+            level_spacing <= target_spacing
+        ), f"Could not find a level with spacing smaller than or equal to {target_spacing}"
+        return level
 
     def get_best_level_for_downsample_custom(self, downsample: float | int):
         """
         Determines the best level for a given downsample factor based on the available
-        level downsample values, with an optional tolerance check.
+        level downsample values.
 
         Args:
             downsample (float): Target downsample factor.
-            tol (float, optional): The tolerance level for the downsample factor match.
-                Defaults to 0.1.
-            return_tol_status (bool, optional): If True, returns whether the selected
-                level's downsample factor is within the specified tolerance. Defaults to False.
 
         Returns:
             int: Index of the best matching level for the given downsample factor.
-            float (optional): Tolerance value (only if `return_tol_status` is True).
-            bool (optional): Whether the selected level's downsample factor exceeds the
-                specified tolerance (only if `return_tol_status` is True).
         """
         level = int(np.argmin([abs(x - downsample) for x, _ in self.level_downsamples]))
         return level
@@ -325,16 +313,8 @@ class WholeSlideImage(object):
 
     def get_tile_coordinates(
         self,
-        target_spacing,
-        target_tile_size,
-        overlap=0.0,
-        tiling_params: TilingParams = TilingParams(
-            drop_holes=False, tissue_thresh=0.25, use_padding=True
-        ),
-        filter_params: FilterParams = FilterParams(
-            ref_tile_size=256, a_t=4, a_h=2, max_n_holes=8
-        ),
-        tolerance: float = 0.1,
+        tiling_params: TilingParams,
+        filter_params: FilterParams,
         num_workers: int = 1,
     ):
         """
@@ -342,19 +322,18 @@ class WholeSlideImage(object):
         and additional tiling and filtering parameters.
 
         Args:
-            target_spacing (float): Desired spacing of the tiles.
-            target_tile_size (int): Desired size of the tiles at the target spacing.
-            overlap (float, optional): Overlap between adjacent tiles. Defaults to 0.0.
             tiling_params (NamedTuple, optional): Parameters for tiling, including:
+                - "spacing" (float): Spacing at which to tile the slide, in microns per pixel.
+                - "tile_size" (int): Size of the tiles to extract, in pixels.
+                - "overlap" (float): Overlap between tiles, as a fraction of the tile size.
                 - "drop_holes" (bool): If True, tiles falling within a hole will be excluded. Defaults to False.
-                - "tissue_thresh" (float, optional): Minimum amount pixels covered with tissue required for a tile. Defaults to 0.25 (25 percent).
+                - "min_tissue_percentage" (float, optional): Minimum amount pixels covered with tissue required for a tile. Defaults to 0.25 (25 percent).
                 - "use_padding" (bool): Whether to use padding for tiles at the edges. Defaults to True.
             filter_params (NamedTuple, optional): Parameters for filtering contours, including:
-                - "ref_tile_size" (int): Reference tile size for filtering. Defaults to 256.
-                - "a_t" (int): Contour area threshold for filtering. Defaults to 4.
-                - "a_h" (int): Hole area threshold for filtering. Defaults to 2.
-                - "max_n_holes" (int): Maximum number of holes allowed. Defaults to 8.
-            tolerance (float, optional): Tolerance for spacing matching. Defaults to 0.1.
+                - "ref_tile_size" (int): Reference tile size for filtering.
+                - "a_t" (int): Contour area threshold for filtering.
+                - "a_h" (int): Hole area threshold for filtering.
+                - "max_n_holes" (int): Maximum number of holes allowed.
             num_workers (int, optional): Number of workers to use for parallel processing.
                 Defaults to 1.
 
@@ -366,10 +345,10 @@ class WholeSlideImage(object):
                 - resize_factor (float): The factor by which the tile size was resized.
                 - tile_size_lv0 (int): The tile size at level 0 of the wsi pyramid.
         """
-        scale = target_spacing / self.get_level_spacing(0)
-        tile_size_lv0 = int(target_tile_size * scale)
+        scale = tiling_params.spacing / self.get_level_spacing(0)
+        tile_size_lv0 = int(tiling_params.tile_size * scale)
 
-        contours, holes = self.detect_contours(target_spacing, filter_params)
+        contours, holes = self.detect_contours(tiling_params.spacing, filter_params)
         (
             running_x_coords,
             running_y_coords,
@@ -379,13 +358,12 @@ class WholeSlideImage(object):
         ) = self.process_contours(
             contours,
             holes,
-            spacing=target_spacing,
-            tile_size=target_tile_size,
-            overlap=overlap,
+            spacing=tiling_params.spacing,
+            tile_size=tiling_params.tile_size,
+            overlap=tiling_params.overlap,
             drop_holes=tiling_params.drop_holes,
-            tissue_thresh=tiling_params.tissue_thresh,
+            min_tissue_percentage=tiling_params.min_tissue_percentage,
             use_padding=tiling_params.use_padding,
-            tolerance=tolerance,
             num_workers=num_workers,
         )
         tile_coordinates = list(zip(running_x_coords, running_y_coords))
@@ -505,7 +483,7 @@ class WholeSlideImage(object):
 
     @staticmethod
     @njit
-    def isInHoles(holes, pt, tile_size):
+    def isInHoles(holes, pt, tile_size: int):
         """
         Check if a given tile is inside any of the specified polygonal holes.
 
@@ -531,7 +509,7 @@ class WholeSlideImage(object):
         return 0
 
     @staticmethod
-    def isInContours(cont_check_fn, pt, holes=None, drop_holes=True, tile_size=256):
+    def isInContours(cont_check_fn, pt, drop_holes: bool, tile_size: int, holes: list | None = None):
         """
         Determines whether a given tile is within contours (and optionally outside of holes).
 
@@ -541,12 +519,10 @@ class WholeSlideImage(object):
                 where `keep_flag` is a boolean indicating if the tile is within contours,
                 and `tissue_pct` is the percentage of tissue coverage of the tile.
             pt (tuple): The (x, y) coordinates of the top-left corner of the tile to check.
-            holes (list, optional): A list of holes (e.g., regions to exclude) to check against.
                 Defaults to None.
-            drop_holes (bool, optional): If True, tiles falling within a hole will be excluded.
-                Defaults to True.
-            tile_size (int, optional): The size of the tile to consider.
-                Defaults to 256.
+            drop_holes (bool): If True, tiles falling within a hole will be excluded.
+            tile_size (int): The size of the tile to consider.
+            holes (list, optional): A list of holes (e.g., regions to exclude) to check against.
 
         Returns:
             tuple: A tuple (keep_flag, tissue_pct), where:
@@ -601,13 +577,12 @@ class WholeSlideImage(object):
         self,
         contours,
         holes,
-        spacing: float = 0.5,
-        tile_size: int = 256,
-        overlap: float = 0.0,
-        drop_holes: bool = True,
-        tissue_thresh: float = 0.01,
-        use_padding: bool = True,
-        tolerance: float = 0.1,
+        spacing: float,
+        tile_size: int,
+        overlap: float,
+        drop_holes: bool,
+        min_tissue_percentage: float,
+        use_padding: bool,
         num_workers: int = 1,
     ):
         """
@@ -617,13 +592,12 @@ class WholeSlideImage(object):
         Args:
             contours (list): List of contours representing tissue blobs in the wsi.
             holes (list): List of tissue holes in each contour.
-            spacing (float, optional): Desired spacing for tiling. Defaults to 0.5.
-            tile_size (int, optional): Desired tile size in pixels. Defaults to 256.
-            overlap (float, optional): Overlap between adjacent tiles. Defaults to 0.0.
-            drop_holes (bool, optional): Whether to drop tiles that fall within holes. Defaults to True.
-            tissue_thresh (float, optional): Minimum amount pixels covered with tissue required for a tile. Defaults to 0.01 (1 percent).
-            use_padding (bool, optional): Whether to pad the tiles to ensure full coverage. Defaults to True.
-            tolerance (float, optional): Tolerance for spacing matching. Defaults to 0.1.
+            spacing (float, optional): Desired spacing for tiling.
+            tile_size (int, optional): Desired tile size in pixels.
+            overlap (float, optional): Overlap between adjacent tiles.
+            drop_holes (bool, optional): Whether to drop tiles that fall within holes.
+            min_tissue_percentage (float, optional): Minimum amount pixels covered with tissue required for a tile.
+            use_padding (bool, optional): Whether to pad the tiles to ensure full coverage.
             num_workers (int, optional): Number of workers to use for parallel processing. Defaults to 1.
 
         Returns:
@@ -647,9 +621,8 @@ class WholeSlideImage(object):
                 tile_size,
                 overlap,
                 drop_holes,
-                tissue_thresh,
+                min_tissue_percentage,
                 use_padding,
-                tolerance,
             )
 
         with ThreadPoolExecutor(max_workers=num_workers) as executor:
@@ -695,12 +668,11 @@ class WholeSlideImage(object):
         contour,
         contour_holes,
         spacing: float,
-        tile_size: int = 256,
-        overlap: float = 0.0,
-        drop_holes: bool = True,
-        tissue_thresh: float = 0.01,
+        tile_size: int,
+        overlap: float,
+        drop_holes: bool,
+        min_tissue_percentage: float,
         use_padding: bool = True,
-        tolerance: float = 0.1,
     ):
         """
         Processes a contour to generate tile coordinates and associated metadata.
@@ -709,12 +681,11 @@ class WholeSlideImage(object):
             contour (numpy.ndarray): Contour to process, defined as a set of points.
             contour_holes (list): List of holes within the contour.
             spacing (float): Target spacing for the tiles.
-            tile_size (int, optional): Size of the tiles in pixels. Defaults to 256.
-            overlap (float, optional): Overlap between tiles. Defaults to 0.0.
-            drop_holes (bool, optional): Whether to drop tiles that fall within holes. Defaults to True.
-            tissue_thresh (float, optional): Minimum amount pixels covered with tissue required for a tile. Defaults to 0.01 (1 percent).
-            use_padding (bool, optional): Whether to pad the image to ensure full coverage. Defaults to True.
-            tolerance (float, optional): Tolerance for spacing matching. Defaults to 0.1.
+            tile_size (int, optional): Size of the tiles in pixels.
+            overlap (float, optional): Overlap between tiles.
+            drop_holes (bool, optional): Whether to drop tiles that fall within holes.
+            min_tissue_percentage (float, optional): Minimum amount pixels covered with tissue required for a tile.
+            use_padding (bool, optional): Whether to pad the image to ensure full coverage.
 
         Returns:
             tuple: A tuple containing:
@@ -724,16 +695,10 @@ class WholeSlideImage(object):
                 - tile_level (int): Level of the image used for tile extraction.
                 - resize_factor (float): The factor by which the tile size was resized.
         """
-        tile_level = self.get_best_level_for_spacing(spacing, tolerance=tolerance)
+        tile_level = self.get_best_level_for_spacing(spacing)
         tile_spacing = self.get_level_spacing(tile_level)
         resize_factor = spacing / tile_spacing
-        if resize_factor < 1:
-            assert abs(tile_spacing - spacing) / spacing <= tolerance, (
-                f"Spacing {tile_spacing} is not within tolerance {tolerance} of target spacing {spacing}"
-            )
-            # set resize_factor to 1.0 if the target spacing is smaller than the tile spacing
-            # but within tolerance, to avoid upsampling the tile size
-            resize_factor = 1.0
+        assert resize_factor >= 1, f"Resize factor should be >= 1, but got {resize_factor}"
 
         tile_size_resized = int(tile_size * resize_factor)
         step_size = int(tile_size_resized * (1.0 - overlap))
@@ -774,7 +739,7 @@ class WholeSlideImage(object):
             tissue_mask=self.binary_mask,
             tile_size=ref_tile_size[0],
             scale=scale,
-            pct=tissue_thresh,
+            pct=min_tissue_percentage,
         )
 
         ref_step_size_x = int(step_size * tile_downsample[0])
@@ -838,7 +803,7 @@ class WholeSlideImage(object):
                 - tissue_pct (float): Percentage of tissue in the tile.
         """
         keep_flag, tissue_pct = WholeSlideImage.isInContours(
-            cont_check_fn, coord, contour_holes, drop_holes, tile_size
+            cont_check_fn, coord, drop_holes, tile_size, contour_holes
         )
         if keep_flag:
             return coord, tissue_pct

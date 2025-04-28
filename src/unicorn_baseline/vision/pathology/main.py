@@ -1,8 +1,9 @@
 import multiprocessing as mp
 import os
+import random
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import tqdm
@@ -12,18 +13,17 @@ from PIL import Image
 from unicorn_baseline.io import resolve_image_path, write_json_file
 from unicorn_baseline.vision.pathology.feature_extraction import extract_features
 from unicorn_baseline.vision.pathology.models import TITAN
-from unicorn_baseline.vision.pathology.wsi import FilterParams, WholeSlideImage
+from unicorn_baseline.vision.pathology.wsi import TilingParams, FilterParams, WholeSlideImage
 
 
 def extract_coordinates(
     *,
     wsi_path: Path,
     tissue_mask_path: Path,
-    spacing,
-    tile_size,
-    overlap: float = 0.0,
-    filter_params: FilterParams = None,
-    max_num_tile: Optional[int] = None,
+    tiling_params: TilingParams,
+    filter_params: FilterParams,
+    max_number_of_tiles: int | None = None,
+    seed: int = 0,
     num_workers: int = 1,
 ):
     """
@@ -32,10 +32,9 @@ def extract_coordinates(
     Args:
         wsi_path (str): File path to the wsi.
         tissue_mask_path (str): File path to the tissue mask associated with the wsi.
-        spacing (float): Desired spacing for the tiles, in micron per pixel (mpp).
-        tile_size (int): Desired size of the tiles to extract.
-        overlap (float, optional): Overlap between tiles. Defaults to 0.0.
-        max_num_tile (Optional[int], optional): Maximum number of tiles to keep. If None, all tiles are kept. Defaults to None.
+        tiling_params (TilingParams): Parameters for tiling the wsi.
+        filter_params (FilterParams): Parameters for filtering the tiles.
+        max_number_of_tiles (Optional[int], optional): Maximum number of tiles to keep. If None, all tiles are kept. Defaults to None.
         num_workers (int, optional): Number of workers to use for parallel processing. Defaults to 1.
 
     Returns:
@@ -54,24 +53,20 @@ def extract_coordinates(
         resize_factor,
         tile_size_lv0,
     ) = wsi.get_tile_coordinates(
-        spacing,
-        tile_size,
-        overlap=overlap,
+        tiling_params=tiling_params,
         filter_params=filter_params,
         num_workers=num_workers,
     )
 
     image_spacings = wsi.spacings[0]
-    required_level = wsi.get_best_level_for_spacing(spacing)
+    required_level = wsi.get_best_level_for_spacing(tiling_params.spacing)
     image_size = wsi.level_dimensions[required_level]
 
     # sort coordinates by tissue percentage
-    sorted_coordinates, sorted_tissue_percentages = sort_coordinates_with_tissue(
-        coordinates=coordinates, tissue_percentages=tissue_percentages
+    sorted_coordinates, sorted_tissue_percentages = select_coordinates_with_tissue(
+        coordinates=coordinates, tissue_percentages=tissue_percentages, max_number_of_tiles=max_number_of_tiles, seed=seed
     )
-    if max_num_tile is not None:
-        sorted_coordinates = sorted_coordinates[:max_num_tile]
-        sorted_tissue_percentages = sorted_tissue_percentages[:max_num_tile]
+
     return (
         sorted_coordinates,
         sorted_tissue_percentages,
@@ -148,38 +143,49 @@ def save_coordinates(
     return output_path
 
 
-def sort_coordinates_with_tissue(*, coordinates, tissue_percentages):
+def select_coordinates_with_tissue(
+    *,
+    coordinates: list[tuple],
+    tissue_percentages: list[float],
+    max_number_of_tiles: int | None = None,
+    seed: int = 0,
+) -> tuple[list[tuple], list[float]]:
     """
-    Sorts coordinates and their corresponding tissue percentages.
-
-    The function creates mocked filenames by combining the x and y values
-    of the coordinates into a string format (e.g., "x_y.jpg"). It then
-    sorts the coordinates and tissue percentages based on these mocked
-    filenames.
+    Select coordinates and their corresponding tissue percentages based on a
+    maximum number of tiles. If more than the maximum number of tiles are found
+    with full tissue content (100%), a random selection of tiles is made.
+    Otherwise, the tiles are sorted by tissue percentage and the top tiles are
+    selected.
 
     Args:
         coordinates (list of tuple): A list of tuples representing coordinates,
             where each tuple contains two integers (x, y).
         tissue_percentages (list of float): A list of tissue percentages
             corresponding to the tile for each coordinate.
+        max_number_of_tiles (int | None): The maximum number of tiles to select.
+            If None, all tiles above the minimum tissue percentage will be selected.
 
     Returns:
         tuple: A tuple containing two lists:
             - sorted_coordinates (list of tuple): The coordinates sorted based
-              on the mocked filenames.
-            - sorted_tissue_percentages (list of float): The tissue
-              percentages sorted in the same order as the coordinates.
+              on the tissue percentages.
+            - sorted_tissue_percentages (list of float): The tissue percentages
+              corresponding to the sorted coordinates.
     """
-    # mock region filenames
-    mocked_filenames = [f"{x}_{y}.jpg" for x, y in coordinates]
-    # combine mocked filenames with coordinates and tissue percentages
-    combined = list(zip(mocked_filenames, coordinates, tissue_percentages))
-    # sort combined list by mocked filenames
-    sorted_combined = sorted(combined, key=lambda x: x[0])
-    # extract sorted coordinates and tissue percentages
-    sorted_coordinates = [coord for _, coord, _ in sorted_combined]
-    sorted_tissue_percentages = [tissue for _, _, tissue in sorted_combined]
-    return sorted_coordinates, sorted_tissue_percentages
+
+    # separate perfect tissue tiles
+    perfect = [(coord, perc) for coord, perc in zip(coordinates, tissue_percentages) if perc == 1.0]
+    if max_number_of_tiles is not None and len(perfect) > max_number_of_tiles:
+        rng = random.Random(seed)
+        selected = rng.sample(perfect, max_number_of_tiles)
+    else:
+        # Sort by descending tissue percentage and take top N if needed
+        all = [(coord, perc) for coord, perc in zip(coordinates, tissue_percentages)]
+        all.sort(key=lambda x: x[1], reverse=True)
+        selected = all[:max_number_of_tiles] if max_number_of_tiles is not None else all
+
+    selected_coordinates, selected_percentages = zip(*selected)
+    return list(selected_coordinates), list(selected_percentages)
 
 
 def save_tile(
@@ -322,11 +328,10 @@ def run_pathology_vision_task(
         elif input_socket["interface"]["kind"] == "Segmentation":
             tissue_mask_path = resolve_image_path(location=input_socket["input_location"])
 
-    target_spacing = 0.5
     use_mixed_precision = True
     save_tiles_to_disk = False
     tile_format = "jpg"
-    max_num_tile = 14000
+    max_number_of_tiles = 14000
 
     num_workers = min(mp.cpu_count(), 8)
     if "SLURM_JOB_CPUS_PER_NODE" in os.environ:
@@ -335,15 +340,14 @@ def run_pathology_vision_task(
     # coonfigurations for tile extraction based on tasks
     clf_config = {
         "batch_size": 32,
-        "tile_size": 512,
+        "tiling_params": TilingParams(spacing=0.5, tile_size=512, overlap=0.0, drop_holes=False, min_tissue_percentage=0.25, use_padding=True),
         "filter_params": FilterParams(ref_tile_size=256, a_t=4, a_h=2, max_n_holes=8),
     }
 
     detection_segmentation_config = {
         "batch_size": 1,
-        "tile_size": 224,
-        "filter_params": FilterParams(ref_tile_size=256, a_t=1, a_h=1, max_n_holes=8),
-        "overlap": 0.5,
+        "tiling_params": TilingParams(spacing=0.5, tile_size=224, overlap=0.5, drop_holes=False, min_tissue_percentage=0.25, use_padding=True),
+        "filter_params": FilterParams(ref_tile_size=224, a_t=1, a_h=1, max_n_holes=8),
     }
 
     task_configs = {
@@ -364,12 +368,10 @@ def run_pathology_vision_task(
         extract_coordinates(
             wsi_path=wsi_path,
             tissue_mask_path=tissue_mask_path,
-            spacing=target_spacing,
-            tile_size=config["tile_size"],
-            overlap=config.get("overlap", 0.0),
-            num_workers=num_workers,
-            max_num_tile=max_num_tile,
+            tiling_params=config["tiling_params"],
             filter_params=config["filter_params"],
+            max_number_of_tiles=max_number_of_tiles,
+            num_workers=num_workers,
         )
     )
 
@@ -377,10 +379,10 @@ def run_pathology_vision_task(
         wsi_path=wsi_path,
         coordinates=coordinates,
         tile_level=level,
-        tile_size=config["tile_size"],
+        tile_size=config["tiling_params"].tile_size,
         resize_factor=resize_factor,
         tile_size_lv0=tile_size_lv0,
-        target_spacing=target_spacing,
+        target_spacing=config["tiling_params"].spacing,
         save_dir=coordinates_dir,
     )
 
@@ -392,7 +394,7 @@ def run_pathology_vision_task(
             wsi_path=wsi_path,
             coordinates=coordinates,
             tile_level=level,
-            tile_size=tile_size,
+            tile_size=config["tiling_params"].tile_size,
             resize_factor=resize_factor,
             save_dir=tile_dir,
             tile_format=tile_format,
@@ -420,7 +422,7 @@ def run_pathology_vision_task(
     if task_type in ["classification", "regression"]:
         save_feature_to_json(feature=feature, task_type=task_type, title=image_title)
     elif task_type in ["detection", "segmentation"]:
-        tile_size = [config["tile_size"], config["tile_size"], 3]
+        tile_size = [config["tiling_params"].tile_size, config["tiling_params"].tile_size, 3]
 
         save_feature_to_json(
             feature=feature,
@@ -428,7 +430,7 @@ def run_pathology_vision_task(
             title=image_title,
             coordinates=coordinates,
             tile_size=tile_size,
-            spacing=target_spacing,
+            spacing=config["tiling_params"].spacing,
             image_size=image_size,
             image_spacing=image_spacing,
         )
