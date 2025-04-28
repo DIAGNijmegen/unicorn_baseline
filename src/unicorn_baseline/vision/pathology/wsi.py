@@ -36,6 +36,7 @@ class TilingParams(NamedTuple):
     """
 
     spacing: float  # spacing at which to tile the slide, in microns per pixel
+    tolerance: float  # tolerance for matching the spacing (float between 0 and 1, deciding how much spacing can deviate from those specified in the slide metadata)
     tile_size: int  # size of the tiles to extract, in pixels
     overlap: float  # overlap between tiles
     drop_holes: bool  # whether to drop tiles that fall within holes
@@ -157,15 +158,16 @@ class WholeSlideImage(object):
             self._level_spacing_cache[level] = self.spacings[level]
         return self._level_spacing_cache[level]
 
-    def get_best_level_for_spacing(self, target_spacing: float):
+    def get_best_level_for_spacing(self, target_spacing: float, tolerance: float = 0.05):
         """
         Determines the best level in a multi-resolution image pyramid for a given target spacing.
 
-        Ensures that the returned spacing is always smaller than or equal to the target spacing
-        to avoid upsampling.
+        Ensures that the spacing of the returned level is either within the specified tolerance of the target
+        spacing or smaller than the target spacing to avoid upsampling.
 
         Args:
             target_spacing (float): Desired spacing.
+            tolerance (float, optional): Tolerance for matching the target spacing.
 
         Returns:
             level (int): Index of the best matching level in the image pyramid.
@@ -175,15 +177,25 @@ class WholeSlideImage(object):
         level = self.get_best_level_for_downsample_custom(target_downsample)
         level_spacing = self.get_level_spacing(level)
 
-        # ensure the returned spacing is smaller than or equal to the target_spacing
-        while level > 0 and level_spacing > target_spacing:
-            level -= 1
-            level_spacing = self.get_level_spacing(level)
+        # check if the level_spacing is within the tolerance of the target_spacing
+        is_within_tolerance = False
+        if abs(level_spacing - target_spacing) / target_spacing <= tolerance:
+            is_within_tolerance = True
+            return level, is_within_tolerance
+
+        # otherwise, look for a spacing smaller than or equal to the target_spacing
+        else:
+            while level > 0 and level_spacing > target_spacing:
+                level -= 1
+                level_spacing = self.get_level_spacing(level)
+                if abs(level_spacing - target_spacing) / target_spacing <= tolerance:
+                    is_within_tolerance = True
+                    break
 
         assert (
-            level_spacing <= target_spacing
-        ), f"Could not find a level with spacing smaller than or equal to {target_spacing}"
-        return level
+            level_spacing <= target_spacing or abs(level_spacing - target_spacing) / target_spacing <= tolerance
+        ), f"Unable to find a level with spacing less than or equal to the target spacing ({target_spacing}) or within {int(tolerance * 100)}% of the target spacing."
+        return level, is_within_tolerance
 
     def get_best_level_for_downsample_custom(self, downsample: float | int):
         """
@@ -318,6 +330,8 @@ class WholeSlideImage(object):
         Args:
             tiling_params (NamedTuple, optional): Parameters for tiling, including:
                 - "spacing" (float): Spacing at which to tile the slide, in microns per pixel.
+                - "tolerance" (float): Tolerance for matching the spacing, deciding how much
+                    spacing can deviate from those specified in the slide metadata.
                 - "tile_size" (int): Size of the tiles to extract, in pixels.
                 - "overlap" (float): Overlap between tiles, as a fraction of the tile size.
                 - "drop_holes" (bool): If True, tiles falling within a hole will be excluded. Defaults to False.
@@ -353,6 +367,7 @@ class WholeSlideImage(object):
             contours,
             holes,
             spacing=tiling_params.spacing,
+            tolerance=tiling_params.tolerance,
             tile_size=tiling_params.tile_size,
             overlap=tiling_params.overlap,
             drop_holes=tiling_params.drop_holes,
@@ -446,7 +461,7 @@ class WholeSlideImage(object):
                 - A list of lists containing scaled hole contours for each foreground contour.
         """
 
-        spacing_level = self.get_best_level_for_spacing(target_spacing)
+        spacing_level, _ = self.get_best_level_for_spacing(target_spacing)
         current_scale = self.level_downsamples[spacing_level]
         target_scale = self.level_downsamples[self.seg_level]
         scale = tuple(a / b for a, b in zip(target_scale, current_scale))
@@ -572,6 +587,7 @@ class WholeSlideImage(object):
         contours,
         holes,
         spacing: float,
+        tolerance: float,
         tile_size: int,
         overlap: float,
         drop_holes: bool,
@@ -587,6 +603,8 @@ class WholeSlideImage(object):
             contours (list): List of contours representing tissue blobs in the wsi.
             holes (list): List of tissue holes in each contour.
             spacing (float): Desired spacing for tiling.
+            tolerance (float): Tolerance for matching the spacing, deciding how much
+                spacing can deviate from those specified in the slide metadata.
             tile_size (int): Desired tile size in pixels.
             overlap (float): Overlap between adjacent tiles.
             drop_holes (bool): Whether to drop tiles that fall within holes.
@@ -612,6 +630,7 @@ class WholeSlideImage(object):
                 contours[i],
                 holes[i],
                 spacing,
+                tolerance,
                 tile_size,
                 overlap,
                 drop_holes,
@@ -662,6 +681,7 @@ class WholeSlideImage(object):
         contour,
         contour_holes,
         spacing: float,
+        tolerance: float,
         tile_size: int,
         overlap: float,
         drop_holes: bool,
@@ -675,6 +695,8 @@ class WholeSlideImage(object):
             contour (numpy.ndarray): Contour to process, defined as a set of points.
             contour_holes (list): List of holes within the contour.
             spacing (float): Target spacing for the tiles.
+            tolerance (float): Tolerance for matching the spacing, deciding how much
+                spacing can deviate from those specified in the slide metadata.
             tile_size (int): Size of the tiles in pixels.
             overlap (float): Overlap between tiles.
             drop_holes (bool): Whether to drop tiles that fall within holes.
@@ -689,9 +711,12 @@ class WholeSlideImage(object):
                 - tile_level (int): Level of the image used for tile extraction.
                 - resize_factor (float): The factor by which the tile size was resized.
         """
-        tile_level = self.get_best_level_for_spacing(spacing)
+        tile_level, is_within_tolerance = self.get_best_level_for_spacing(spacing, tolerance)
         tile_spacing = self.get_level_spacing(tile_level)
         resize_factor = spacing / tile_spacing
+        if is_within_tolerance:
+            resize_factor = 1.0
+
         assert resize_factor >= 1, f"Resize factor should be >= 1, but got {resize_factor}"
 
         tile_size_resized = int(tile_size * resize_factor)
