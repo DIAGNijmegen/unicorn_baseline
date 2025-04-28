@@ -2,7 +2,7 @@ import sys
 import warnings
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 
 import cv2
 import numpy as np
@@ -51,24 +51,21 @@ class WholeSlideImage(object):
         name (str): Name of the wsi (stem of the path).
         fmt (str): File format of the wsi.
         wsi (wsd.WholeSlideImage): wsi object.
-        spacing (Optional[float]): Manually set spacing at level 0.
         spacings (List[float]): List of spacings for each level.
         level_dimensions (List[Tuple[int, int]]): Dimensions at each level.
         level_downsamples (List[Tuple[float, float]]): Downsample factors for each level.
         backend (str): Backend used for opening the wsi (default: "asap").
-        mask_path (Optional[Path]): Path to the segmentation mask.
-        mask (Optional[wsd.WholeSlideImage]): mask object.
+        mask_path (Path): Path to the segmentation mask.
+        mask (wsd.WholeSlideImage): Segmentation mask object.
         seg_level (int): Level for segmentation.
-        contours_tissue (Optional[List]): Tissue contours.
-        contours_tumor (Optional[List]): Tumor contours.
-        binary_mask (Optional[np.ndarray]): Binary segmentation mask as a numpy array.
+        binary_mask (np.ndarray): Binary segmentation mask as a numpy array.
     """
 
     def __init__(
         self,
         path: Path,
         mask_path: Path | None = None,
-        spacing: float | None = None,
+        spacing_at_lvl_0: float | None = None,
         downsample: int = 32,
         backend: str = "asap",
     ):
@@ -77,9 +74,9 @@ class WholeSlideImage(object):
 
         Args:
             path (Path): Path to the wsi.
-            mask_path (Optional[Path]): Path to the tissue mask, if available. Defaults to None.
-            spacing (Optional[float]): Manually set spacing at level 0, if speficied. Defaults to None.
-            downsample (int): Downsample factor for finding best level for tissue segmentation. Defaults to 64.
+            mask_path (Path, optional): Path to the tissue mask, if available. Defaults to None.
+            spacing_at_lvl_0 (float, optional): Manually set spacing at level 0, if speficied. Defaults to None.
+            downsample (int): Downsample factor for finding best level for tissue segmentation. Defaults to 32.
             backend (str): Backend to use for opening the wsi. Defaults to "asap".
         """
 
@@ -92,7 +89,7 @@ class WholeSlideImage(object):
         self._scaled_holes_cache = {}  # add a cache for scaled holes
         self._level_spacing_cache = {}  # add a cache for level spacings
 
-        self.spacing = spacing  # manually set spacing at level 0
+        self.spacing_at_lvl_0 = spacing_at_lvl_0  # manually set spacing at level 0
         self.spacings = self.get_spacings()
         self.level_dimensions = self.wsi.shapes
         self.level_downsamples = self.get_downsamples()
@@ -104,9 +101,6 @@ class WholeSlideImage(object):
             self.seg_level = self.load_segmentation(downsample)
         else:
             self.seg_level = self.segment_tissue(downsample)
-
-        self.contours_tissue = None
-        self.contours_tumor = None
 
     def get_downsamples(self):
         """
@@ -141,11 +135,11 @@ class WholeSlideImage(object):
             list: A list of spacings, either the original or adjusted based on the
             `spacing` attribute.
         """
-        if self.spacing is None:
+        if self.spacing_at_lvl_0 is None:
             spacings = self.wsi.spacings
         else:
             spacings = [
-                self.spacing * s / self.wsi.spacings[0] for s in self.wsi.spacings
+                self.spacing_at_lvl_0 * s / self.wsi.spacings[0] for s in self.wsi.spacings
             ]
         return spacings
 
@@ -592,12 +586,12 @@ class WholeSlideImage(object):
         Args:
             contours (list): List of contours representing tissue blobs in the wsi.
             holes (list): List of tissue holes in each contour.
-            spacing (float, optional): Desired spacing for tiling.
-            tile_size (int, optional): Desired tile size in pixels.
-            overlap (float, optional): Overlap between adjacent tiles.
-            drop_holes (bool, optional): Whether to drop tiles that fall within holes.
-            min_tissue_percentage (float, optional): Minimum amount pixels covered with tissue required for a tile.
-            use_padding (bool, optional): Whether to pad the tiles to ensure full coverage.
+            spacing (float): Desired spacing for tiling.
+            tile_size (int): Desired tile size in pixels.
+            overlap (float): Overlap between adjacent tiles.
+            drop_holes (bool): Whether to drop tiles that fall within holes.
+            min_tissue_percentage (float): Minimum amount pixels covered with tissue required for a tile.
+            use_padding (bool): Whether to pad the tiles to ensure full coverage.
             num_workers (int, optional): Number of workers to use for parallel processing. Defaults to 1.
 
         Returns:
@@ -681,11 +675,11 @@ class WholeSlideImage(object):
             contour (numpy.ndarray): Contour to process, defined as a set of points.
             contour_holes (list): List of holes within the contour.
             spacing (float): Target spacing for the tiles.
-            tile_size (int, optional): Size of the tiles in pixels.
-            overlap (float, optional): Overlap between tiles.
-            drop_holes (bool, optional): Whether to drop tiles that fall within holes.
-            min_tissue_percentage (float, optional): Minimum amount pixels covered with tissue required for a tile.
-            use_padding (bool, optional): Whether to pad the image to ensure full coverage.
+            tile_size (int): Size of the tiles in pixels.
+            overlap (float): Overlap between tiles.
+            drop_holes (bool): Whether to drop tiles that fall within holes.
+            min_tissue_percentage (float): Minimum amount pixels covered with tissue required for a tile.
+            use_padding (bool): Whether to pad the image to ensure full coverage.
 
         Returns:
             tuple: A tuple containing:

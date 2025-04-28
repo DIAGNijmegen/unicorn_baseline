@@ -34,7 +34,7 @@ def extract_coordinates(
         tissue_mask_path (str): File path to the tissue mask associated with the wsi.
         tiling_params (TilingParams): Parameters for tiling the wsi.
         filter_params (FilterParams): Parameters for filtering the tiles.
-        max_number_of_tiles (Optional[int], optional): Maximum number of tiles to keep. If None, all tiles are kept. Defaults to None.
+        max_number_of_tiles (int, optional): Maximum number of tiles to keep. If None, all tiles are kept. Defaults to None.
         num_workers (int, optional): Number of workers to use for parallel processing. Defaults to 1.
 
     Returns:
