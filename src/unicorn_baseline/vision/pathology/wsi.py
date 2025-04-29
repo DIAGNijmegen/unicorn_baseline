@@ -1,5 +1,6 @@
 import sys
 import warnings
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import NamedTuple
@@ -17,6 +18,8 @@ from unicorn_baseline.vision.pathology.wsi_utils import HasEnoughTissue
 warnings.filterwarnings("ignore", module="wholeslidedata")
 
 Image.MAX_IMAGE_PIXELS = 933120000
+_printed_warning = False
+_warning_lock = threading.Lock()
 
 
 class FilterParams(NamedTuple):
@@ -172,6 +175,8 @@ class WholeSlideImage(object):
         Returns:
             level (int): Index of the best matching level in the image pyramid.
         """
+        global _printed_warning
+
         spacing = self.get_level_spacing(0)
         target_downsample = target_spacing / spacing
         level = self.get_best_level_for_downsample_custom(target_downsample)
@@ -193,7 +198,10 @@ class WholeSlideImage(object):
                     break
 
         if not abs(level_spacing - target_spacing) / target_spacing <= tolerance and verbose:
-            print(f"Unable to find a level with spacing within {tolerance:.0%} of the target spacing ({target_spacing:.2f}). Resampling from {level_spacing:.2f} instead.")
+            with _warning_lock:
+                if not _printed_warning:
+                    print(f"Unable to find a level with spacing within {tolerance:.0%} of the target spacing ({target_spacing:.2f}). Resampling from {level_spacing:.2f} instead.")
+                    _printed_warning = True
 
         return level, is_within_tolerance
 
