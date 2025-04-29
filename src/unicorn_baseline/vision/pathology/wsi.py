@@ -158,7 +158,7 @@ class WholeSlideImage(object):
             self._level_spacing_cache[level] = self.spacings[level]
         return self._level_spacing_cache[level]
 
-    def get_best_level_for_spacing(self, target_spacing: float, tolerance: float = 0.05):
+    def get_best_level_for_spacing(self, target_spacing: float, tolerance: float):
         """
         Determines the best level in a multi-resolution image pyramid for a given target spacing.
 
@@ -192,9 +192,9 @@ class WholeSlideImage(object):
                     is_within_tolerance = True
                     break
 
-        assert (
-            level_spacing <= target_spacing or abs(level_spacing - target_spacing) / target_spacing <= tolerance
-        ), f"Unable to find a level with spacing less than or equal to the target spacing ({target_spacing}) or within {int(tolerance * 100)}% of the target spacing."
+        if not abs(level_spacing - target_spacing) / target_spacing <= tolerance:
+            print(f"Unable to find a level with spacing within {tolerance:.0%} of the target spacing ({target_spacing:.2f}). Resampling from {level_spacing:.2f} instead.")
+
         return level, is_within_tolerance
 
     def get_best_level_for_downsample_custom(self, downsample: float | int):
@@ -218,11 +218,8 @@ class WholeSlideImage(object):
         tissue_pixel_value: int = 1,
     ):
         """
-        Load and process a segmentation mask for a whole slide image.
-
-        This method ensures that the segmentation mask and the slide have at least one
-        common spacing, determines the best level for the given downsample factor, and
-        processes the segmentation mask to create a binary mask.
+        Processes the segmentation mask to create a binary mask. The binary mask is resized
+        to match the dimensions of the slide at the level corresponding to the desired downsample.
 
         Args:
             downsample (int): Downsample factor for finding best level for tissue segmentation.
@@ -237,11 +234,6 @@ class WholeSlideImage(object):
         mask_spacing_at_level_0 = self.mask.spacings[0]
         seg_level = self.get_best_level_for_downsample_custom(downsample)
         seg_spacing = self.get_level_spacing(seg_level)
-        while seg_spacing < mask_spacing_at_level_0 and seg_level < len(self.spacings) - 1:
-            seg_level += 1
-            seg_spacing = self.get_level_spacing(seg_level)
-
-        assert seg_spacing >= mask_spacing_at_level_0, f"Segmentation mask natural spacing ({mask_spacing_at_level_0}) is higher than the lowest spacing in the slide ({seg_spacing}), aborting."
 
         mask_downsample = seg_spacing / mask_spacing_at_level_0
         mask_level = int(np.argmin([abs(x - mask_downsample) for x in self.mask.downsamplings]))
@@ -253,11 +245,10 @@ class WholeSlideImage(object):
             mask_spacing = self.mask.spacings[mask_level]
             scale = seg_spacing / mask_spacing
 
-        assert scale >= 1
         mask = self.mask.get_slide(spacing=mask_spacing)
         width, height, _ = mask.shape
         # resize the mask to the size of the slide at seg_spacing
-        mask = cv2.resize(mask.astype(np.uint8), (int(height // scale), int(width // scale)), interpolation=cv2.INTER_NEAREST)
+        mask = cv2.resize(mask.astype(np.uint8), (int(height / scale), int(width / scale)), interpolation=cv2.INTER_NEAREST)
 
         m = (mask == tissue_pixel_value).astype("uint8")
         if np.max(m) <= 1:
@@ -356,7 +347,7 @@ class WholeSlideImage(object):
         scale = tiling_params.spacing / self.get_level_spacing(0)
         tile_size_lv0 = int(tiling_params.tile_size * scale)
 
-        contours, holes = self.detect_contours(tiling_params.spacing, filter_params)
+        contours, holes = self.detect_contours(tiling_params.spacing, tiling_params.tolerance, filter_params)
         (
             running_x_coords,
             running_y_coords,
@@ -439,6 +430,7 @@ class WholeSlideImage(object):
     def detect_contours(
         self,
         target_spacing: float,
+        tolerance: float,
         filter_params: FilterParams,
     ):
         """
@@ -449,6 +441,8 @@ class WholeSlideImage(object):
 
         Args:
             target_spacing (float): Desired spacing at which tiles should be extracted.
+            tolerance (float): Tolerance for matching the target spacing, deciding how much
+                spacing can deviate from those specified in the slide metadata.
             filter_params (NamedTuple): A NamedTuple containing filtering parameters:
                 - "a_t" (int): Minimum area threshold for foreground contours.
                 - "a_h" (int): Minimum area threshold for holes within contours.
@@ -461,7 +455,7 @@ class WholeSlideImage(object):
                 - A list of lists containing scaled hole contours for each foreground contour.
         """
 
-        spacing_level, _ = self.get_best_level_for_spacing(target_spacing)
+        spacing_level, _ = self.get_best_level_for_spacing(target_spacing, tolerance)
         current_scale = self.level_downsamples[spacing_level]
         target_scale = self.level_downsamples[self.seg_level]
         scale = tuple(a / b for a, b in zip(target_scale, current_scale))
@@ -716,8 +710,6 @@ class WholeSlideImage(object):
         resize_factor = spacing / tile_spacing
         if is_within_tolerance:
             resize_factor = 1.0
-
-        assert resize_factor >= 1, f"Resize factor should be >= 1, but got {resize_factor}"
 
         tile_size_resized = int(tile_size * resize_factor)
         step_size = int(tile_size_resized * (1.0 - overlap))

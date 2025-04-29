@@ -59,7 +59,7 @@ def extract_coordinates(
     )
 
     image_spacings = wsi.spacings[0]
-    required_level, _ = wsi.get_best_level_for_spacing(tiling_params.spacing)
+    required_level, _ = wsi.get_best_level_for_spacing(tiling_params.spacing, tiling_params.tolerance)
     image_size = wsi.level_dimensions[required_level]
 
     # sort coordinates by tissue percentage
