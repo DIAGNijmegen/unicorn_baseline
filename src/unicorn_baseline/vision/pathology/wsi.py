@@ -158,7 +158,7 @@ class WholeSlideImage(object):
             self._level_spacing_cache[level] = self.spacings[level]
         return self._level_spacing_cache[level]
 
-    def get_best_level_for_spacing(self, target_spacing: float, tolerance: float):
+    def get_best_level_for_spacing(self, target_spacing: float, tolerance: float, verbose: bool = False):
         """
         Determines the best level in a multi-resolution image pyramid for a given target spacing.
 
@@ -192,7 +192,7 @@ class WholeSlideImage(object):
                     is_within_tolerance = True
                     break
 
-        if not abs(level_spacing - target_spacing) / target_spacing <= tolerance:
+        if not abs(level_spacing - target_spacing) / target_spacing <= tolerance and verbose:
             print(f"Unable to find a level with spacing within {tolerance:.0%} of the target spacing ({target_spacing:.2f}). Resampling from {level_spacing:.2f} instead.")
 
         return level, is_within_tolerance
@@ -705,7 +705,7 @@ class WholeSlideImage(object):
                 - tile_level (int): Level of the image used for tile extraction.
                 - resize_factor (float): The factor by which the tile size was resized.
         """
-        tile_level, is_within_tolerance = self.get_best_level_for_spacing(spacing, tolerance)
+        tile_level, is_within_tolerance = self.get_best_level_for_spacing(spacing, tolerance, verbose=True)
         tile_spacing = self.get_level_spacing(tile_level)
         resize_factor = spacing / tile_spacing
         if is_within_tolerance:
