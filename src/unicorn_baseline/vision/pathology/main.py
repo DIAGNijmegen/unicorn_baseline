@@ -340,13 +340,13 @@ def run_pathology_vision_task(
     # coonfigurations for tile extraction based on tasks
     clf_config = {
         "batch_size": 32,
-        "tiling_params": TilingParams(spacing=0.5, tolerance=0.05, tile_size=512, overlap=0.0, drop_holes=False, min_tissue_percentage=0.25, use_padding=True),
+        "tiling_params": TilingParams(spacing=0.5, tolerance=0.07, tile_size=512, overlap=0.0, drop_holes=False, min_tissue_percentage=0.25, use_padding=True),
         "filter_params": FilterParams(ref_tile_size=256, a_t=4, a_h=2, max_n_holes=8),
     }
 
     detection_segmentation_config = {
         "batch_size": 1,
-        "tiling_params": TilingParams(spacing=0.5, tolerance=0.05, tile_size=224, overlap=0.5, drop_holes=False, min_tissue_percentage=0.1, use_padding=True),
+        "tiling_params": TilingParams(spacing=0.5, tolerance=0.07, tile_size=224, overlap=0.5, drop_holes=False, min_tissue_percentage=0.1, use_padding=True),
         "filter_params": FilterParams(ref_tile_size=64, a_t=1, a_h=1, max_n_holes=8),
     }
 
