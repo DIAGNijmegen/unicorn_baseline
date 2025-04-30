@@ -2,7 +2,7 @@ from pathlib import Path
 
 from unicorn_baseline.io import resolve_image_path, write_json_file
 from unicorn_baseline.vision.pathology.main import extract_coordinates, save_coordinates
-from unicorn_baseline.vision.pathology.wsi import FilterParams
+from unicorn_baseline.vision.pathology.wsi import FilterParams, TilingParams
 from unicorn_baseline.vision_language.inference import generate_caption
 from unicorn_baseline.vision_language.models import PRISM, Virchow
 
@@ -39,12 +39,11 @@ def run_vision_language_task(*, input_information, model_dir):
         elif input_socket["interface"]["kind"] == "Segmentation":
             tissue_mask_path = resolve_image_path(location=input_socket["input_location"])
 
-    target_spacing = 0.5
-    tile_size = 224
     num_workers = 4
-    batch_size = 1
+    batch_size = 32
     mixed_precision = True
-    max_num_tile = 14000
+    max_number_of_tiles = 14000
+    tiling_params = TilingParams(spacing=0.5, tolerance=0.07, tile_size=224, overlap=0.0, drop_holes=False, min_tissue_percentage=0.25, use_padding=True)
     filter_params = FilterParams(ref_tile_size=256, a_t=4, a_h=2, max_n_holes=8)
 
     # create output directories
@@ -54,12 +53,10 @@ def run_vision_language_task(*, input_information, model_dir):
         extract_coordinates(
             wsi_path=wsi_path,
             tissue_mask_path=tissue_mask_path,
-            spacing=target_spacing,
-            tile_size=tile_size,
-            num_workers=num_workers,
-            overlap=0.0,
+            tiling_params=tiling_params,
             filter_params=filter_params,
-            max_num_tile=max_num_tile,
+            max_number_of_tiles=max_number_of_tiles,
+            num_workers=num_workers,
         )
     )
 
@@ -67,10 +64,10 @@ def run_vision_language_task(*, input_information, model_dir):
         wsi_path=wsi_path,
         coordinates=coordinates,
         tile_level=level,
-        tile_size=tile_size,
+        tile_size=tiling_params.tile_size,
         resize_factor=resize_factor,
         tile_size_lv0=tile_size_lv0,
-        target_spacing=target_spacing,
+        target_spacing=tiling_params.spacing,
         save_dir=coordinates_dir,
     )
 

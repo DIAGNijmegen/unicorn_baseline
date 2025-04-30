@@ -200,7 +200,7 @@ class WholeSlideImage(object):
         if not abs(level_spacing - target_spacing) / target_spacing <= tolerance and verbose:
             with _warning_lock:
                 if not _printed_warning:
-                    print(f"Unable to find a level with spacing within {tolerance:.0%} of the target spacing ({target_spacing:.2f}). Resampling from {level_spacing:.2f} instead.")
+                    print(f"Unable to find a spacing within {tolerance:.0%} of the target spacing ({target_spacing:.2f}). Resampling from {level_spacing:.2f} instead.")
                     _printed_warning = True
 
         return level, is_within_tolerance
