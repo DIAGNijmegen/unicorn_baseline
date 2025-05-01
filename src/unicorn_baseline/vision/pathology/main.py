@@ -346,18 +346,18 @@ def run_pathology_vision_task(
     }
 
     detection_config = {
-            "tiling_params": TilingParams(spacing=0.5, tolerance=0.07, tile_size=224, overlap=0, drop_holes=False, min_tissue_percentage=0.1, use_padding=True),
+            "tiling_params": TilingParams(spacing=0.5, tolerance=0.07, tile_size=448, overlap=0, drop_holes=False, min_tissue_percentage=0.1, use_padding=True),
             "filter_params": FilterParams(ref_tile_size=64, a_t=1, a_h=1, max_n_holes=8),
         }
 
     if task_name == 'Task08_detecting_mitotic_figures_in_breast_cancer_wsis':
         detection_config = {
-            "tiling_params": TilingParams(spacing=0.25, tolerance=0.07, tile_size=224, overlap=0, drop_holes=False, min_tissue_percentage=0.1, use_padding=True),
+            "tiling_params": TilingParams(spacing=0.25, tolerance=0.07, tile_size=448, overlap=0, drop_holes=False, min_tissue_percentage=0.1, use_padding=True),
             "filter_params": FilterParams(ref_tile_size=64, a_t=1, a_h=1, max_n_holes=8),
         }
 
     segmentation_config = {
-        "tiling_params": TilingParams(spacing=0.5, tolerance=0.07, tile_size=224, overlap=0, drop_holes=False, min_tissue_percentage=0.1, use_padding=True),
+        "tiling_params": TilingParams(spacing=0.5, tolerance=0.07, tile_size=448, overlap=0, drop_holes=False, min_tissue_percentage=0.1, use_padding=True),
         "filter_params": FilterParams(ref_tile_size=64, a_t=1, a_h=1, max_n_holes=8),
     }
 
