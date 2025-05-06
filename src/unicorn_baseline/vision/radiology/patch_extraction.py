@@ -1,7 +1,7 @@
 from typing import Iterable
 import numpy as np
 import SimpleITK as sitk
-# from picai_prep.preprocessing import resample_img, crop_or_pad
+from picai_prep.preprocessing import resample_img, crop_or_pad
 import itertools
 
 
