@@ -6,7 +6,7 @@ import numpy as np
 import torch
 
 
-def load_model(model_path : str = "project-lighter/whole_body_segmentation"):
+def load_model(model_path):
     # Load pre-trained model
     return SegResNet.from_pretrained(
         model_path
