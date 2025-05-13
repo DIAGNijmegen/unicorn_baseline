@@ -20,3 +20,4 @@ SimpleITK
 Pillow
 llm_extractinator==0.4.2
 dragon_baseline>=0.4.5
+sentencepiece

@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from unicorn_baseline.io import resolve_image_path, write_json_file
@@ -5,6 +6,7 @@ from unicorn_baseline.vision.pathology.main import extract_coordinates, save_coo
 from unicorn_baseline.vision.pathology.wsi import FilterParams, TilingParams
 from unicorn_baseline.vision_language.inference import generate_caption
 from unicorn_baseline.vision_language.models import PRISM, Virchow
+from transformers import MarianMTModel, MarianTokenizer
 
 
 def get_file_path(file_location, extensions):
@@ -27,6 +29,33 @@ def save_output(caption, name):
     )
 
     print(f"Caption saved to {output_filename}")
+
+def translate(caption):
+    """
+    Translates text to from English to Dutch using the Helsinki model. Note this model is just one example of a translation model that is publicly available.
+    The model is available on HuggingFace https://huggingface.co/Helsinki-NLP/opus-mt-en-nl. Note that the model is not trained on medical data, so the translation may not be perfect. Alternative models may perform better. 
+    
+    Args:
+        caption (str): Caption to be translated.
+        source_language (str): Source language  (e.g., 'en', 'fr', 'de').
+
+    Returns
+
+    -------
+        str: Text translated to Dutch.
+    """
+    model_dir = "/opt/ml/model/opus-mt-en-nl"
+        
+    # Assert the model directory exists
+    assert os.path.isdir(model_dir), f"Model directory does not exist: {model_dir}"
+
+    tokenizer = MarianTokenizer.from_pretrained(model_dir)
+    model = MarianMTModel.from_pretrained(model_dir)
+
+
+    translated = model.generate(**tokenizer(caption, return_tensors="pt", padding=True))
+    caption_translated = [tokenizer.decode(t, skip_special_tokens=True) for t in translated][0]
+    return caption_translated
 
 
 def run_vision_language_task(*, input_information, model_dir):
@@ -86,5 +115,5 @@ def run_vision_language_task(*, input_information, model_dir):
     )
 
     caption = caption[0].replace("</s>", "").strip()
-
-    save_output(caption, image_name)
+    caption_translated= translate(caption) 
+    save_output(caption_translated, image_name)
