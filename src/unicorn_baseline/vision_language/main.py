@@ -37,12 +37,11 @@ def translate(caption):
     
     Args:
         caption (str): Caption to be translated.
-        source_language (str): Source language  (e.g., 'en', 'fr', 'de').
 
     Returns
 
     -------
-        str: Text translated to Dutch.
+        str: Caption translated to Dutch.
     """
     model_dir = "/opt/ml/model/opus-mt-en-nl"
         
@@ -51,7 +50,6 @@ def translate(caption):
 
     tokenizer = MarianTokenizer.from_pretrained(model_dir)
     model = MarianMTModel.from_pretrained(model_dir)
-
 
     translated = model.generate(**tokenizer(caption, return_tensors="pt", padding=True))
     caption_translated = [tokenizer.decode(t, skip_special_tokens=True) for t in translated][0]
