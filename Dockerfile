@@ -11,6 +11,7 @@ RUN groupadd --gid ${USER_GID} user \
 # create input/output directory
 RUN mkdir /input /output && \
     chown user:user /input /output
+RUN mkdir -p /opt/app/workdir/language  && chown user:user /opt/app/workdir/language
 
 # Ensures that Python output to stdout/stderr is not buffered: prevents missing information when terminating
 ENV PYTHONUNBUFFERED=1
@@ -68,7 +69,6 @@ COPY --chown=user:user setup.cfg /opt/app/unicorn_baseline/
 COPY --chown=user:user README.md /opt/app/unicorn_baseline/
 COPY --chown=user:user pyproject.toml /opt/app/unicorn_baseline/
 
-RUN python -m pip install /opt/app/unicorn_baseline
-
+RUN python -m pip install  /opt/app/unicorn_baseline
 
 ENTRYPOINT ["unicorn_baseline"]
