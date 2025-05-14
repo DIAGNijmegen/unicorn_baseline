@@ -38,6 +38,8 @@ def translate(caption, model_dir, model_name="opus-mt-en-nl"):
     
     Args:
         caption (str): Caption to be translated.
+        model_dir (str): Base directory where models are stored.
+        model_name (str): Name of the translation model.
 
     Returns
 
