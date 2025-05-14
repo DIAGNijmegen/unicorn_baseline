@@ -30,9 +30,10 @@ def save_output(caption, name):
 
     print(f"Caption saved to {output_filename}")
 
-def translate(caption):
+
+def translate(caption, model_dir, model_name="opus-mt-en-nl"):
     """
-    Translates text to from English to Dutch using the Helsinki model. Note this model is just one example of a translation model that is publicly available.
+    Translates text from English to Dutch using the Helsinki model. Note this model is just one example of a translation model that is publicly available.
     The model is available on HuggingFace https://huggingface.co/Helsinki-NLP/opus-mt-en-nl. Note that the model is not trained on medical data, so the translation may not be perfect. Alternative models may perform better. 
     
     Args:
@@ -43,13 +44,14 @@ def translate(caption):
     -------
         str: Caption translated to Dutch.
     """
-    model_dir = "/opt/ml/model/opus-mt-en-nl"
-        
-    # Assert the model directory exists
-    assert os.path.isdir(model_dir), f"Model directory does not exist: {model_dir}"
 
-    tokenizer = MarianTokenizer.from_pretrained(model_dir)
-    model = MarianMTModel.from_pretrained(model_dir)
+    model_path = os.path.join(model_dir, model_name)
+        
+    # Assert the model path exists
+    assert os.path.exists(model_path), f"Model path does not exist: {model_path}"
+
+    tokenizer = MarianTokenizer.from_pretrained(model_path)
+    model = MarianMTModel.from_pretrained(model_path)
 
     translated = model.generate(**tokenizer(caption, return_tensors="pt", padding=True))
     caption_translated = [tokenizer.decode(t, skip_special_tokens=True) for t in translated][0]
@@ -113,5 +115,5 @@ def run_vision_language_task(*, input_information, model_dir):
     )
 
     caption = caption[0].replace("</s>", "").strip()
-    caption_translated= translate(caption) 
+    caption_translated = translate(caption, model_dir, model_name="opus-mt-en-nl")
     save_output(caption_translated, image_name)
