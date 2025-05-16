@@ -89,7 +89,7 @@ docker volume create "$DOCKER_NOOP_VOLUME" > /dev/null
 docker run --rm \
     --platform=linux/amd64 \
     --network none \
-    --gpus all  \
+    --gpus all \
     --volume "$INPUT_DIR":/input:ro \
     --volume "$OUTPUT_DIR":/output \
     --volume "$DOCKER_NOOP_VOLUME":/tmp \

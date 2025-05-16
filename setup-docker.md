@@ -17,7 +17,7 @@ We provide scripts to automate the local testing process using public few-shot d
    ```bash 
    ./run_task.sh "https://zenodo.org/records/15315589/files/Task01_classifying_he_prostate_biopsies_into_isup_scores.zip"
    ```
-- `run_all_tasks.sh`: Runs the above process for all 20 UNICORN tasks sequentially.   
+- `run_all_tasks.sh`: Runs the above process for all supported UNICORN tasks sequentially.   
    ```bash
       ./run_all_tasks.sh  
    ```
