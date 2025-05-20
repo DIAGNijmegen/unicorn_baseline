@@ -74,7 +74,7 @@ def run_vision_language_task(*, input_information, model_dir):
     batch_size = 32
     mixed_precision = True
     max_number_of_tiles = 14000
-    tiling_params = TilingParams(spacing=0.5, tolerance=0.07, tile_size=224, overlap=0.0, drop_holes=False, min_tissue_percentage=0.25, use_padding=True)
+    tiling_params = TilingParams(spacing=0.5, tolerance=0.07, tile_size=224, overlap=0.0, drop_holes=False, min_tissue_ratio=0.25, use_padding=True)
     filter_params = FilterParams(ref_tile_size=256, a_t=4, a_h=2, max_n_holes=8)
 
     # create output directories
