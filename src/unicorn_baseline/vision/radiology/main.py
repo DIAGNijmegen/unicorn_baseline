@@ -12,9 +12,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import json
-import logging
-import time
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -41,11 +38,7 @@ def extract_features_classification(
     model.eval()
     with torch.no_grad():
         batch = dataset[0]
-        case_id = batch["ID"]
         scan_volume = batch["image"].to(device)
-
-        logging.info(f"Processing scan: {case_id}...")
-        start_time = time.time()
 
         patch_features = []
         for d in range(scan_volume.shape[0]):
@@ -59,9 +52,6 @@ def extract_features_classification(
 
         image_level_feature = torch.stack(patch_features).mean(dim=0)
         feature_list = image_level_feature.tolist()[:max_feature_length]
-
-        elapsed = time.time() - start_time
-        logging.info(f"Extracted features for {case_id} (Time: {elapsed:.2f}s)")
 
         return {
             "title": slug,
@@ -158,9 +148,6 @@ def run_radiology_vision_task(
 
     if task_type == "classification":
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        gpu_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"
-        logging.info(f"Using device: {gpu_name}")
-
         model = SmallDINOv2(model_dir=model_dir, use_safetensors=True).to(device)
 
         outputs = []
@@ -169,13 +156,10 @@ def run_radiology_vision_task(
             image_dir = Path(image_input["input_location"])
             scan_path = next(image_dir.glob("*.mha"), None)
             if scan_path is None:
-                logging.warning(f"No .mha file found in {image_dir}.")
                 continue
 
             from unicorn_baseline.vision.radiology.dataset import get_scan_dataset
-            print("scan found")
             dataset = get_scan_dataset(scan_path, seed=42)
-            print("dataset preprocessing complete")
 
             result = extract_features_classification(
                 model=model,
@@ -189,7 +173,6 @@ def run_radiology_vision_task(
         output_dir = Path("/output")
         output_path = output_dir / "image-neural-representation.json"
         write_json_file(location=output_path, content=outputs)
-        print(f"[classification] wrote JSON list to: {output_path}")
 
     elif task_type in ["detection", "segmentation"]:
         output_dir = Path("/output")

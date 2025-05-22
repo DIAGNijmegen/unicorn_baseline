@@ -20,6 +20,6 @@ SimpleITK
 Pillow
 llm_extractinator==0.4.2
 lighter-zoo
-xformers==0.0.29
+xformers
 dragon_baseline>=0.4.5
 picai_prep>=2.1.13
