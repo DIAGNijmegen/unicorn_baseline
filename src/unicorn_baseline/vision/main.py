@@ -40,7 +40,7 @@ def run_vision(
             input_information=input_information,
             model_dir=model_dir,
         )
-    elif domain == "radiology":
+    elif (domain == "CT") | (domain == "MR"):
         run_radiology_vision_task(
             task_type=task_type,
             input_information=input_information,
