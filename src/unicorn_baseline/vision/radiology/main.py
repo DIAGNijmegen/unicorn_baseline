@@ -26,6 +26,7 @@ from unicorn_baseline.io import resolve_image_path, write_json_file
 from unicorn_baseline.vision.radiology.ctfm.ctfm import encode, load_model
 from unicorn_baseline.vision.radiology.models import SmallDINOv2
 from unicorn_baseline.vision.radiology.patch_extraction import extract_patches
+from picai_prep.preprocessing import Sample, PreprocessingSettings
 
 def extract_features_classification(
     model: nn.Module,
@@ -60,18 +61,21 @@ def extract_features_classification(
 
 
 def extract_features_segmentation(
-    image_path: Path,
+    image,
     model_dir: str,
     title: str = "patch-level-neural-representation",
-    patch_size: list[int] = [224, 224, 16],
+    patch_size: list[int] = [16, 224, 224],
     patch_spacing: list[float] | None = None,
 ) -> list[dict]:
     """
     Generate a list of patch features from a radiology image
     """
     patch_features = []
-    print(f"Reading image from {image_path}")
-    image = sitk.ReadImage(str(image_path))
+    
+    image_orientation = sitk.DICOMOrientImageFilter_GetOrientationFromDirectionCosines(image.GetDirection())
+    if image_orientation != 'SPL': 
+        image = sitk.DICOMOrient(image, desiredCoordinateOrientation='SPL')
+    
 
     print(f"Extracting patches from image")
     patches, coordinates = extract_patches(
@@ -177,14 +181,44 @@ def run_radiology_vision_task(
     elif task_type in ["detection", "segmentation"]:
         output_dir = Path("/output")
         neural_representations = []
-        for image_input in image_inputs:
-            image_path = resolve_image_path(location=image_input["input_location"])
-            neural_representation = extract_features_segmentation(
-                image_path=image_path,
-                model_dir=model_dir,
-                title=image_input["interface"]["slug"]
-            )
-            neural_representations.append(neural_representation)
+
+        if image_inputs[0]['interface']['slug'].endswith('prostate-mri'):
+            images_to_preprocess = {}
+            for image_input in image_inputs:
+                image_path = resolve_image_path(location=image_input["input_location"])
+                print(f"Reading image from {image_path}")
+                image = sitk.ReadImage(str(image_path))
+
+                if 't2' in str(location): 
+                    images_to_preprocess.update({'t2' : image})
+                if 'hbv' in str(location): 
+                    images_to_preprocess.update({'hbv' : image})
+                if 'adc' in str(location): 
+                    images_to_preprocess.update({'adc' : image})
+
+            pat_case = Sample(scans=[images_to_preprocess.get('t2'), images_to_preprocess.get('hbv'), images_to_preprocess.get('adc')], settings=PreprocessingSettings(spacing=[1,1,1], matrix_size=[16,256,256]))
+            pat_case.preprocess()
+            
+            for image in pat_case.scans:
+                neural_representation = extract_features_segmentation(
+                        image=image,
+                        model_dir=model_dir, 
+                        title=image_input["interface"]["slug"]
+                )
+                neural_representations.append(neural_representation)
+
+        else: 
+            for image_input in image_inputs:
+                resolve_image_path(location=image_input["input_location"])
+                print(f"Reading image from {image_path}")
+                image = sitk.ReadImage(str(image_path))
+
+                neural_representation = extract_features_segmentation(
+                    image=image,
+                    model_dir=model_dir, 
+                    title=image_input["interface"]["slug"]
+                )
+                neural_representations.append(neural_representation)
 
         output_path = output_dir / "patch-neural-representation.json"
         write_json_file(location=output_path, content=neural_representations)
