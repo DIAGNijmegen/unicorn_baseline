@@ -189,11 +189,11 @@ def run_radiology_vision_task(
                 print(f"Reading image from {image_path}")
                 image = sitk.ReadImage(str(image_path))
 
-                if 't2' in str(location): 
+                if 't2' in str(image_input["input_location"]): 
                     images_to_preprocess.update({'t2' : image})
-                if 'hbv' in str(location): 
+                if 'hbv' in str(image_input["input_location"]): 
                     images_to_preprocess.update({'hbv' : image})
-                if 'adc' in str(location): 
+                if 'adc' in str(image_input["input_location"]): 
                     images_to_preprocess.update({'adc' : image})
 
             pat_case = Sample(scans=[images_to_preprocess.get('t2'), images_to_preprocess.get('hbv'), images_to_preprocess.get('adc')], settings=PreprocessingSettings(spacing=[1,1,1], matrix_size=[16,256,256]))
