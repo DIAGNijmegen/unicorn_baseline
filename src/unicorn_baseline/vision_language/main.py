@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from unicorn_baseline.io import resolve_image_path, write_json_file
@@ -5,6 +6,7 @@ from unicorn_baseline.vision.pathology.main import extract_coordinates, save_coo
 from unicorn_baseline.vision.pathology.wsi import FilterParams, TilingParams
 from unicorn_baseline.vision_language.inference import generate_caption
 from unicorn_baseline.vision_language.models import PRISM, Virchow
+from transformers import MarianMTModel, MarianTokenizer
 
 
 def get_file_path(file_location, extensions):
@@ -29,6 +31,35 @@ def save_output(caption, name):
     print(f"Caption saved to {output_filename}")
 
 
+def translate(caption, model_dir, model_name="opus-mt-en-nl"):
+    """
+    Translates text from English to Dutch using the Helsinki model. Note this model is just one example of a translation model that is publicly available.
+    The model is available on HuggingFace https://huggingface.co/Helsinki-NLP/opus-mt-en-nl. Note that the model is not trained on medical data, so the translation may not be perfect. Alternative models may perform better. 
+    
+    Args:
+        caption (str): Caption to be translated.
+        model_dir (str): Base directory where models are stored.
+        model_name (str): Name of the translation model.
+
+    Returns
+
+    -------
+        str: Caption translated to Dutch.
+    """
+
+    model_path = os.path.join(model_dir, model_name)
+        
+    # Assert the model path exists
+    assert os.path.exists(model_path), f"Model path does not exist: {model_path}"
+
+    tokenizer = MarianTokenizer.from_pretrained(model_path)
+    model = MarianMTModel.from_pretrained(model_path)
+
+    translated = model.generate(**tokenizer(caption, return_tensors="pt", padding=True))
+    caption_translated = [tokenizer.decode(t, skip_special_tokens=True) for t in translated][0]
+    return caption_translated
+
+
 def run_vision_language_task(*, input_information, model_dir):
 
     tissue_mask_path = None
@@ -43,7 +74,7 @@ def run_vision_language_task(*, input_information, model_dir):
     batch_size = 32
     mixed_precision = True
     max_number_of_tiles = 14000
-    tiling_params = TilingParams(spacing=0.5, tolerance=0.07, tile_size=224, overlap=0.0, drop_holes=False, min_tissue_percentage=0.25, use_padding=True)
+    tiling_params = TilingParams(spacing=0.5, tolerance=0.07, tile_size=224, overlap=0.0, drop_holes=False, min_tissue_ratio=0.25, use_padding=True)
     filter_params = FilterParams(ref_tile_size=256, a_t=4, a_h=2, max_n_holes=8)
 
     # create output directories
@@ -86,5 +117,5 @@ def run_vision_language_task(*, input_information, model_dir):
     )
 
     caption = caption[0].replace("</s>", "").strip()
-
-    save_output(caption, image_name)
+    caption_translated = translate(caption, model_dir, model_name="opus-mt-en-nl")
+    save_output(caption_translated, image_name)

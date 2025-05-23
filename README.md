@@ -17,3 +17,9 @@ unicorn_baseline
 ├── example-data/           # Examples of interfaces and sample files
 └── Dockerfile              # Example docker file
 ```
+
+## 🚀 Getting Started
+
+System requirements: Linux-based OS (e.g., Ubuntu 22.04) with Python 3.10+ and Docker installed.
+
+1. [Local development with Docker using public shots from Zenodo](./setup-docker.md).

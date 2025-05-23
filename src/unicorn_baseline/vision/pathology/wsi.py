@@ -43,7 +43,7 @@ class TilingParams(NamedTuple):
     tile_size: int  # size of the tiles to extract, in pixels
     overlap: float  # overlap between tiles
     drop_holes: bool  # whether to drop tiles that fall within holes
-    min_tissue_percentage: float  # minimum tissue percentage required for a tile
+    min_tissue_ratio: float  # minimum tissue percentage required for a tile
     use_padding: bool  # whether to use padding for tiles at the edges
 
 
@@ -334,7 +334,7 @@ class WholeSlideImage(object):
                 - "tile_size" (int): Size of the tiles to extract, in pixels.
                 - "overlap" (float): Overlap between tiles, as a fraction of the tile size.
                 - "drop_holes" (bool): If True, tiles falling within a hole will be excluded. Defaults to False.
-                - "min_tissue_percentage" (float, optional): Minimum amount pixels covered with tissue required for a tile. Defaults to 0.25 (25 percent).
+                - "min_tissue_ratio" (float, optional): Minimum amount pixels covered with tissue required for a tile. Defaults to 0.25 (25 percent).
                 - "use_padding" (bool): Whether to use padding for tiles at the edges. Defaults to True.
             filter_params (NamedTuple, optional): Parameters for filtering contours, including:
                 - "ref_tile_size" (int): Reference tile size for filtering.
@@ -370,7 +370,7 @@ class WholeSlideImage(object):
             tile_size=tiling_params.tile_size,
             overlap=tiling_params.overlap,
             drop_holes=tiling_params.drop_holes,
-            min_tissue_percentage=tiling_params.min_tissue_percentage,
+            min_tissue_ratio=tiling_params.min_tissue_ratio,
             use_padding=tiling_params.use_padding,
             num_workers=num_workers,
         )
@@ -593,7 +593,7 @@ class WholeSlideImage(object):
         tile_size: int,
         overlap: float,
         drop_holes: bool,
-        min_tissue_percentage: float,
+        min_tissue_ratio: float,
         use_padding: bool,
         num_workers: int = 1,
     ):
@@ -610,7 +610,7 @@ class WholeSlideImage(object):
             tile_size (int): Desired tile size in pixels.
             overlap (float): Overlap between adjacent tiles.
             drop_holes (bool): Whether to drop tiles that fall within holes.
-            min_tissue_percentage (float): Minimum amount pixels covered with tissue required for a tile.
+            min_tissue_ratio (float): Minimum amount pixels covered with tissue required for a tile.
             use_padding (bool): Whether to pad the tiles to ensure full coverage.
             num_workers (int, optional): Number of workers to use for parallel processing. Defaults to 1.
 
@@ -636,7 +636,7 @@ class WholeSlideImage(object):
                 tile_size,
                 overlap,
                 drop_holes,
-                min_tissue_percentage,
+                min_tissue_ratio,
                 use_padding,
             )
 
@@ -687,7 +687,7 @@ class WholeSlideImage(object):
         tile_size: int,
         overlap: float,
         drop_holes: bool,
-        min_tissue_percentage: float,
+        min_tissue_ratio: float,
         use_padding: bool = True,
     ):
         """
@@ -702,7 +702,7 @@ class WholeSlideImage(object):
             tile_size (int): Size of the tiles in pixels.
             overlap (float): Overlap between tiles.
             drop_holes (bool): Whether to drop tiles that fall within holes.
-            min_tissue_percentage (float): Minimum amount pixels covered with tissue required for a tile.
+            min_tissue_ratio (float): Minimum amount pixels covered with tissue required for a tile.
             use_padding (bool): Whether to pad the image to ensure full coverage.
 
         Returns:
@@ -758,7 +758,7 @@ class WholeSlideImage(object):
             tissue_mask=self.binary_mask,
             tile_size=ref_tile_size[0],
             scale=scale,
-            pct=min_tissue_percentage,
+            pct=min_tissue_ratio,
         )
 
         ref_step_size_x = int(step_size * tile_downsample[0])
