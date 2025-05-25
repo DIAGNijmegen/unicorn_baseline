@@ -209,7 +209,8 @@ def run_radiology_vision_task(
 
         else: 
             for image_input in image_inputs:
-                resolve_image_path(location=image_input["input_location"])
+                image_path = resolve_image_path(location=image_input["input_location"])
+                resolve_image_path(location=image_path)
                 print(f"Reading image from {image_path}")
                 image = sitk.ReadImage(str(image_path))
 
