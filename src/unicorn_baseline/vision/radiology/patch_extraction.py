@@ -92,18 +92,3 @@ def extract_patches(
         coordinates.append(world_coordinates)
 
     return patches, coordinates
-
-
-if __name__ == '__main__':
-    # Example usage
-    # Create image of size 9x7x4 with random values
-    image = sitk.GetImageFromArray(np.random.rand(*[9, 7, 4][::-1]))
-
-    # Extract 3x3x3 patches with 1x1x0.5 spacing
-    patches, coordinates = extract_patches(
-        image=image,
-        patch_size=(3, 3, 3),
-        spacing=(1.0, 1.0, 0.5),
-    )
-    print(f"Number of patches extracted: {len(patches)}")
-    # Number of patches extracted: 27
