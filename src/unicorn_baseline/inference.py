@@ -41,9 +41,9 @@ from unicorn_baseline.language.main import run_language
 from unicorn_baseline.vision.main import run_vision
 from unicorn_baseline.vision_language.main import run_vision_language_task
 
-INPUT_PATH = Path("/input")
+INPUT_PATH = Path("/data/temporary/unicorn/debugging/encoding/vision/task-10/input")
 OUTPUT_PATH = Path("/output")
-MODEL_PATH = Path("/opt/ml/model")
+MODEL_PATH = Path("/data/temporary/unicorn/models/baseline-models/ctfm")
 
 def print_directory_contents(path: Path | str):
     path = Path(path)
