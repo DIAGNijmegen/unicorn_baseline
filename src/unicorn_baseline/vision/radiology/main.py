@@ -152,7 +152,7 @@ def run_radiology_vision_task(
 
     if task_type == "classification":
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        model = SmallDINOv2(model_dir=model_dir, use_safetensors=True).to(device)
+        model = SmallDINOv2(model_dir=Path(model_dir, "SmallDINOv2"), use_safetensors=True).to(device)
 
         outputs = []
         for image_input in image_inputs:
@@ -202,7 +202,7 @@ def run_radiology_vision_task(
             for image in pat_case.scans:
                 neural_representation = extract_features_segmentation(
                         image=image,
-                        model_dir=model_dir, 
+                        model_dir=Path(model_dir, "ctfm"), 
                         title=image_input["interface"]["slug"]
                 )
                 neural_representations.append(neural_representation)
@@ -215,7 +215,7 @@ def run_radiology_vision_task(
 
                 neural_representation = extract_features_segmentation(
                     image=image,
-                    model_dir=model_dir, 
+                    model_dir=Path(model_dir, "ctfm"), 
                     title=image_input["interface"]["slug"]
                 )
                 neural_representations.append(neural_representation)
