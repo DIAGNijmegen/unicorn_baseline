@@ -44,7 +44,9 @@ class Virchow(nn.Module):
         checkpoint_path = os.path.join(self.model_dir, "virchow-tile-encoder.pth")
         print(f"Loading tile encoder weights from {checkpoint_path}...")
         weights = torch.load(checkpoint_path, map_location=self.device)
-        updated_sd, msg = update_state_dict(model_dict=self.tile_encoder.state_dict(), state_dict=weights)
+        updated_sd, msg = update_state_dict(
+            model_dict=self.tile_encoder.state_dict(), state_dict=weights
+        )
         print(msg)
         self.tile_encoder.load_state_dict(updated_sd, strict=True)
         self.tile_encoder.to(self.device)
@@ -96,14 +98,18 @@ class PRISM(nn.Module):
         from transformers.models.biogpt.configuration_biogpt import BioGptConfig
 
         cfg = PrismConfig(
-            biogpt_config=BioGptConfig(), perceiver_config=PerceiverConfig(), model_dir=self.model_dir
+            biogpt_config=BioGptConfig(),
+            perceiver_config=PerceiverConfig(),
+            model_dir=self.model_dir,
         )
         slide_encoder = Prism(cfg)
 
         checkpoint_path = os.path.join(self.model_dir, "prism-slide-encoder.pth")
         print(f"Loading slide encoder weights from {checkpoint_path}...")
         weights = torch.load(checkpoint_path, map_location=self.device)
-        updated_sd, msg = update_state_dict(model_dict=slide_encoder.state_dict(), state_dict=weights)
+        updated_sd, msg = update_state_dict(
+            model_dict=slide_encoder.state_dict(), state_dict=weights
+        )
         print(msg)
         slide_encoder.load_state_dict(updated_sd, strict=True)
         slide_encoder.to(self.device)

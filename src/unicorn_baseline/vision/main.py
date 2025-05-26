@@ -31,7 +31,7 @@ def run_vision(
     # retrieve task details
     domain = task_description["domain"]
     task_type = task_description["task_type"]
-    task_name = task_description['task_name']
+    task_name = task_description["task_name"]
 
     if domain == "pathology":
         run_pathology_vision_task(
