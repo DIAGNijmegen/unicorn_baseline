@@ -34,8 +34,8 @@ def save_output(caption, name):
 def translate(caption, model_dir, model_name="opus-mt-en-nl"):
     """
     Translates text from English to Dutch using the Helsinki model. Note this model is just one example of a translation model that is publicly available.
-    The model is available on HuggingFace https://huggingface.co/Helsinki-NLP/opus-mt-en-nl. Note that the model is not trained on medical data, so the translation may not be perfect. Alternative models may perform better. 
-    
+    The model is available on HuggingFace https://huggingface.co/Helsinki-NLP/opus-mt-en-nl. Note that the model is not trained on medical data, so the translation may not be perfect. Alternative models may perform better.
+
     Args:
         caption (str): Caption to be translated.
         model_dir (str): Base directory where models are stored.
@@ -48,7 +48,7 @@ def translate(caption, model_dir, model_name="opus-mt-en-nl"):
     """
 
     model_path = os.path.join(model_dir, model_name)
-        
+
     # Assert the model path exists
     assert os.path.exists(model_path), f"Model path does not exist: {model_path}"
 
@@ -56,7 +56,9 @@ def translate(caption, model_dir, model_name="opus-mt-en-nl"):
     model = MarianMTModel.from_pretrained(model_path)
 
     translated = model.generate(**tokenizer(caption, return_tensors="pt", padding=True))
-    caption_translated = [tokenizer.decode(t, skip_special_tokens=True) for t in translated][0]
+    caption_translated = [
+        tokenizer.decode(t, skip_special_tokens=True) for t in translated
+    ][0]
     return caption_translated
 
 
@@ -68,13 +70,23 @@ def run_vision_language_task(*, input_information, model_dir):
             image_name = input_socket["image"]["name"]
             wsi_path = resolve_image_path(location=input_socket["input_location"])
         elif input_socket["interface"]["kind"] == "Segmentation":
-            tissue_mask_path = resolve_image_path(location=input_socket["input_location"])
+            tissue_mask_path = resolve_image_path(
+                location=input_socket["input_location"]
+            )
 
     num_workers = 4
     batch_size = 32
     mixed_precision = True
     max_number_of_tiles = 14000
-    tiling_params = TilingParams(spacing=0.5, tolerance=0.07, tile_size=224, overlap=0.0, drop_holes=False, min_tissue_ratio=0.25, use_padding=True)
+    tiling_params = TilingParams(
+        spacing=0.5,
+        tolerance=0.07,
+        tile_size=224,
+        overlap=0.0,
+        drop_holes=False,
+        min_tissue_ratio=0.25,
+        use_padding=True,
+    )
     filter_params = FilterParams(ref_tile_size=256, a_t=4, a_h=2, max_n_holes=8)
 
     # create output directories

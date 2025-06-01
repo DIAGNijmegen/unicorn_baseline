@@ -71,7 +71,10 @@ def generate_caption(
         )
     else:
         dataset = TileDataset(
-            wsi_path, coordinates_dir=coordinates_dir, backend=backend, transforms=transforms
+            wsi_path,
+            coordinates_dir=coordinates_dir,
+            backend=backend,
+            transforms=transforms,
         )
 
     dataloader = torch.utils.data.DataLoader(
