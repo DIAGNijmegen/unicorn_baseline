@@ -215,7 +215,6 @@ def run_radiology_vision_task(
                         domain=domain,
                         title=image_input["interface"]["slug"]
                 )
-                print(neural_representation.get('meta'))
                 neural_representations.append(neural_representation)
 
         else: 
