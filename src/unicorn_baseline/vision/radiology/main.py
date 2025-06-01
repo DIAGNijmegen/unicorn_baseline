@@ -23,10 +23,11 @@ from torch import nn
 from tqdm import tqdm
 
 from unicorn_baseline.io import resolve_image_path, write_json_file
-from unicorn_baseline.vision.radiology.ctfm.ctfm import encode, load_model
-from unicorn_baseline.vision.radiology.models import SmallDINOv2
+from unicorn_baseline.vision.radiology.models.ctfm import encode, load_model
+from unicorn_baseline.vision.radiology.models.smalldinov2 import SmallDINOv2
 from unicorn_baseline.vision.radiology.patch_extraction import extract_patches
 from picai_prep.preprocessing import Sample, PreprocessingSettings
+from unicorn_baseline.vision.radiology.models.mrsegmentator import load_model_mr
 
 def extract_features_classification(
     model: nn.Module,
@@ -63,8 +64,9 @@ def extract_features_classification(
 def extract_features_segmentation(
     image,
     model_dir: str,
+    domain: str,
     title: str = "patch-level-neural-representation",
-    patch_size: list[int] = [16, 224, 224],
+    patch_size: list[int] = [16, 128, 128],
     patch_spacing: list[float] | None = None,
 ) -> list[dict]:
     """
@@ -73,8 +75,11 @@ def extract_features_segmentation(
     patch_features = []
     
     image_orientation = sitk.DICOMOrientImageFilter_GetOrientationFromDirectionCosines(image.GetDirection())
-    if image_orientation != 'SPL': 
+    if (image_orientation != 'SPL') and (domain == 'CT'): 
         image = sitk.DICOMOrient(image, desiredCoordinateOrientation='SPL')
+    
+    if (image_orientation != 'LPS') and (domain == 'MR'): 
+        image = sitk.DICOMOrient(image, desiredCoordinateOrientation='LPS')
     
 
     print(f"Extracting patches from image")
@@ -86,7 +91,10 @@ def extract_features_segmentation(
     if patch_spacing is None:
         patch_spacing = image.GetSpacing()
 
-    model = load_model(model_dir) 
+    if domain == 'CT':
+        model = load_model(Path(model_dir, "ctfm")) 
+    if domain == 'MR': 
+        model = load_model_mr(Path(model_dir, "mrsegmentator"))
     print(f"Extracting features from patches")
     for patch, coords in tqdm(zip(patches, coordinates), total=len(patches), desc="Extracting features"):
         patch_array = sitk.GetArrayFromImage(patch)
@@ -143,6 +151,7 @@ def run_radiology_vision_task(
     task_type: str,
     input_information: dict[str, Any],
     model_dir: Path,
+    domain: str,
 ):
     # Identify image inputs
     image_inputs = []
@@ -152,7 +161,7 @@ def run_radiology_vision_task(
 
     if task_type == "classification":
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        model = SmallDINOv2(model_dir=model_dir, use_safetensors=True).to(device)
+        model = SmallDINOv2(model_dir=Path(model_dir, "SmallDINOv2"), use_safetensors=True).to(device)
 
         outputs = []
         for image_input in image_inputs:
@@ -203,19 +212,22 @@ def run_radiology_vision_task(
                 neural_representation = extract_features_segmentation(
                         image=image,
                         model_dir=model_dir, 
+                        domain=domain,
                         title=image_input["interface"]["slug"]
                 )
+                print(neural_representation.get('meta'))
                 neural_representations.append(neural_representation)
 
         else: 
             for image_input in image_inputs:
-                image_path = resolve_image_path(location=image_input["input_location"])
+                image_path = resolve_image_path(location=image_input["input_location"])              
                 print(f"Reading image from {image_path}")
                 image = sitk.ReadImage(str(image_path))
 
                 neural_representation = extract_features_segmentation(
                     image=image,
                     model_dir=model_dir, 
+                    domain=domain,
                     title=image_input["interface"]["slug"]
                 )
                 neural_representations.append(neural_representation)

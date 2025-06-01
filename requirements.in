@@ -24,3 +24,4 @@ xformers
 dragon_baseline>=0.4.5
 picai_prep>=2.1.13
 sentencepiece
+dynamic_network_architectures

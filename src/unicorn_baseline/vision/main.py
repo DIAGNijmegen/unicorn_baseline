@@ -45,6 +45,7 @@ def run_vision(
             task_type=task_type,
             input_information=input_information,
             model_dir=model_dir,
+            domain=domain,
         )
     else:
         raise ValueError(f"Domain '{domain}' not supported yet for vision tasks.")
