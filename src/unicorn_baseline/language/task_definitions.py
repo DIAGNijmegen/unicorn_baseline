@@ -189,7 +189,7 @@ TASK_DEFINITIONS = {
             "<ACCREDITATIE_NUMMER>, <TIJD>, and <LEEFTIJD>. Use tags exactly as specified, and avoid tagging non-PII data like medical measurements."
         ),
         "Parser_Format": {
-            "text": {
+            "tagged_text": {
                 "type": "str",
                 "description": (
                     "The text with the identified PII entities replaced by their respective tags."
