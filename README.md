@@ -23,3 +23,10 @@ unicorn_baseline
 System requirements: Linux-based OS (e.g., Ubuntu 22.04) with Python 3.10+ and Docker installed.
 
 1. [Local development with Docker using public shots from Zenodo](./setup-docker.md).
+
+## Further information 
+
+The models used in this baseline are: 
+Radiology-Vision: 
+- [MRSegmentator](https://github.com/hhaentze/MRSegmentator/tree/master): [Paper](https://arxiv.org/pdf/2405.06463) - [Weights](https://github.com/hhaentze/MRSegmentator/releases/tag/v1.2.0)
+- [CT-FM: Whole Body Segmetation](https://github.com/project-lighter/CT-FM): [Paper](https://arxiv.org/pdf/2501.09001) - [Weights](https://huggingface.co/project-lighter/whole_body_segmentation)
