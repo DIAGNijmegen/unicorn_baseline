@@ -21,12 +21,26 @@ mkdir -p model
 # SmallDINOv2
 
 # biogpt
+python3 - <<EOF
+from transformers import BioGptTokenizer, BioGptForCausalLM
+
+model = BioGptForCausalLM.from_pretrained("microsoft/biogpt")
+tokenizer = BioGptTokenizer.from_pretrained("microsoft/biogpt")
+
+model.save_pretrained("model/biogpt")
+tokenizer.save_pretrained("model/biogpt")
+EOF
 
 # ctfm
 
 # mrsegmentator
 
 # opus-mt-en-nl
+python3 - <<EOF
+from transformers import MarianMTModel, MarianTokenizer
+MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-en-nl").save_pretrained("model/opus-mt-en-nl")
+MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-nl").save_pretrained("model/opus-mt-en-nl")
+EOF
 
 # phi4
 
