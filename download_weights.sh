@@ -29,6 +29,22 @@ mkdir -p model
 # opus-mt-en-nl
 
 # phi4
+mkdir -p model/phi4
+echo "Downloading phi4 model from Ollama..."
+
+ollama pull phi4
+
+# Locate the Ollama model directory
+OLLAMA_MODEL_DIR="${HOME}/.ollama/models/blobs"
+OLLAMA_MANIFEST_DIR="${HOME}/.ollama/models/manifests/registry.ollama.ai/library/phi4/latest"
+
+# Copy blobs and manifest files
+mkdir -p model/phi4/blobs
+mkdir -p model/phi4/manifests/registry.ollama.ai/library/phi4/latest
+
+cp ${OLLAMA_MODEL_DIR}/sha256-* model/phi4/blobs/ 2>/dev/null || echo "No blob files found."
+cp -r ${OLLAMA_MANIFEST_DIR}/* model/phi4/manifests/registry.ollama.ai/library/phi4/latest/ 2>/dev/null || echo "No manifest files found."
+
 
 # PRISM
 curl -L -H "$HF_HEADER" https://huggingface.co/paige-ai/Prism/resolve/main/model.safetensors -o model/prism-slide-encoder.pth
