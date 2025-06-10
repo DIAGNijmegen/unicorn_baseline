@@ -60,7 +60,8 @@ RUN python -m pip install \
     --requirement /opt/app/requirements.in
 
 # Separate xformers related install as it gives error during build otherwise
-RUN python -m pip install --user xformers dragon_baseline>=0.4.6 && rm -rf /home/user/.cache/pip
+RUN python -m pip install --user xformers 'dragon_baseline>=0.4.6'
+RUN rm -rf /home/user/.cache/pip
 
 # install UNICORN baseline
 COPY --chown=user:user src /opt/app/unicorn_baseline/src
