@@ -12,6 +12,7 @@ This baseline uses the following publicly available foundation models:
 - [PRISM](https://huggingface.co/paige-ai/Prism) (link to [publication](https://arxiv.org/abs/2405.10254))
 - [MRSegmentator](https://github.com/hhaentze/MRSegmentator/tree/master) (link to [publication](https://arxiv.org/pdf/2405.06463))
 - [CT-FM: Whole Body Segmetation](https://github.com/project-lighter/CT-FM) (link to [publication](https://arxiv.org/pdf/2501.09001))
+- [phi4](https://ollama.com/library/phi4:14b)
 
 ## 🚀 Quickstart
 
