@@ -50,7 +50,7 @@ source "${SCRIPT_DIR}/do_build.sh" "$DOCKER_IMAGE_TAG"
 # This allows the host user (e.g. you) to access and handle these files
 cleanup() {
     echo "=+= Cleaning permissions ..."
-     
+
     docker run --rm \
       --platform=linux/amd64 \
       --volume "$OUTPUT_DIR":/output \
