@@ -13,6 +13,8 @@ This baseline uses the following publicly available foundation models:
 - [MRSegmentator](https://github.com/hhaentze/MRSegmentator/tree/master) (link to [publication](https://arxiv.org/pdf/2405.06463))
 - [CT-FM: Whole Body Segmetation](https://github.com/project-lighter/CT-FM) (link to [publication](https://arxiv.org/pdf/2501.09001))
 - [phi4](https://ollama.com/library/phi4:14b)
+- [BioGPT](https://huggingface.co/microsoft/biogpt) (link to [publication](https://arxiv.org/abs/2210.10341))
+- [opus-mt-en-nl](https://huggingface.co/Helsinki-NLP/opus-mt-en-nl)
 
 ## 🚀 Quickstart
 
