@@ -51,7 +51,7 @@ Make sure to always take the **latest** version of the data on Zenodo.
    ```
 - **All Tasks:** Runs the docker on all supported UNICORN tasks, sequentially.
    ```bash
-    ./run_all_tasks.sh
+  ./run_all_tasks.sh
    ```
 - **Targeted Test Run:** Run the docker on a specific case folder.
    ```bash
@@ -70,15 +70,6 @@ Make sure to always take the **latest** version of the data on Zenodo.
   Each task provides a `unicorn-task-description.json` describing the required inputs and metadata. See [example-data/](example-data/README.md) for sample files and structure.
 - **Output:**
   The baseline generates standardized output files (e.g., `image-neural-representation.json`, `patch-neural-representation.json`) as required by the challenge.
-
-## 🧑‍💻 Development
-
-- Source code is organized by modality:
-  - [`src/unicorn_baseline/vision/`](src/unicorn_baseline/vision/)
-  - [`src/unicorn_baseline/language/`](src/unicorn_baseline/language/)
-  - [`src/unicorn_baseline/vision_language/`](src/unicorn_baseline/vision_language/)
-- The main entrypoint for inference is [`src/unicorn_baseline/inference.py`](src/unicorn_baseline/inference.py).
-
 
 ## 📜 License
 
