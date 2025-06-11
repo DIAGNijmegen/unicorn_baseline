@@ -52,16 +52,14 @@ WORKDIR /opt/app/
 # You can add any Python dependencies to requirements.in/requirements.txt
 RUN python -m pip install --upgrade pip setuptools pip-tools \
     && rm -rf /home/user/.cache/pip
+
 COPY --chown=user:user requirements.in /opt/app/
 RUN python -m pip install \
     --user \
     --no-cache-dir \
     --no-color \
-    --requirement /opt/app/requirements.in
-
-# Separate xformers related install as it gives error during build otherwise
-RUN python -m pip install --user xformers 'dragon_baseline>=0.4.6'
-RUN rm -rf /home/user/.cache/pip
+    --requirement /opt/app/requirements.in \
+    && rm -rf /home/user/.cache/pip
 
 # install UNICORN baseline
 COPY --chown=user:user src /opt/app/unicorn_baseline/src
