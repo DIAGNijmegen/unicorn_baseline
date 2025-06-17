@@ -149,6 +149,13 @@ def post_process_predictions(data: json, task_config: DragonBaseline):
                 float(example.pop("lesion_4")),
                 float(example.pop("lesion_5")),
             ]
+    elif task_id == 18:
+        for example in data:
+            example[prediction_name] = [
+                float(example.pop("prostate_volume")),
+                float(example.pop("PSA_level")),
+                float(example.pop("PSA_density")),
+            ]
     data = drop_keys_except(data, ["uid", prediction_name])
     return data
 
@@ -163,20 +170,22 @@ def run_language(OUTPUT_PATH: Path) -> int:
     few_shots = algorithm.df_train
     test_data = algorithm.df_test
     basepath = Path("/opt/app/workdir/language")
-    setup_folder_structure(basepath, test_data, filename="test")
     print(f"Task description: {task_config}")
 
     task_name = task_config.task_name
     task_id = task_config.jobid
 
+    # Task specific preprocessing
+    if task_name.lower().startswith("task16_"):
+        test_data["text"] = test_data["text_parts"].apply(task16_preprocessing)
+        task_config.input_name = "text"
+
+    setup_folder_structure(basepath, test_data, filename="test")
+
     generate_task_file(
         config=task_config,
         task_folder=basepath / "tasks",
     )
-
-    # Task specific preprocessing
-    if task_name.startswith("Task16_"):
-        test_data["text"] = test_data["text_parts"].apply(task16_preprocessing)
 
     # Perform data extraction
     extractinate(
@@ -221,6 +230,8 @@ def run_language(OUTPUT_PATH: Path) -> int:
     )
 
     # Verify the predictions
+    if task_name.lower().startswith("task16_"):
+        task_config.input_name = "text_parts"
     algorithm.test_predictions_path = test_predictions_path
     algorithm.verify_predictions()
 

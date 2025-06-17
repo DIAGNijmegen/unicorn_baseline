@@ -165,18 +165,23 @@ TASK_DEFINITIONS = {
         "Task": "Predicting prostate volume, PSA, and PSA density",
         "Type": "Regression",
         "Description": (
-            "This task involves one of three possible predictions, which will be specified at the beginning of each case: "
-            "(1) predicting prostate volume in cubic centimeters, (2) predicting Prostate-Specific Antigen (PSA), or (3) predicting PSA density. "
-            "If a range is given for prostate volume, calculate and use the average. PSA density is related to PSA and volume via the formula: "
-            "volume = PSA / PSA density. Use this relationship if needed to compute missing values."
+            "The goal is to predict the prostate volume (in cm3), PSA level (in ng/ml) and PSA density (in ng/ml/ml) based on the radiology report. When a value is not explicitly stated, it should be denoted as 'NaN'. When dimensions are given (e.g., “3 x 4 x 5 mm”), we used the ellipsoid formula to calculate the volume (π*l*w*h/6), with l, w, and h the spatial dimensions in mm. When a range is given (e.g., “PSA: 4-5”), provide the average (i.e., 4.5)."
         ),
         "Parser_Format": {
-            "single_label_regression": {
+            "prostate_volume": {
+                "type": "float",
+                "description": "The estimated prostate volume in cm3, or NaN if not described.",
+            },
+            "PSA_level": {
+                "type": "float",
+                "description": ("The PSA level in ng/ml, or NaN if not described."),
+            },
+            "PSA_density": {
                 "type": "float",
                 "description": (
-                    "The prostate volume in cubic centimeters, the PSA value, or the PSA density value depending on the case."
+                    "The PSA density in ng/ml/cm3, or NaN if not described."
                 ),
-            }
+            },
         },
     },
     "Task019": {
