@@ -14,6 +14,7 @@ from unicorn_baseline.io import resolve_image_path, write_json_file
 from unicorn_baseline.vision.pathology.feature_extraction import extract_features
 from unicorn_baseline.vision.pathology.models import TITAN
 from unicorn_baseline.vision.pathology.wsi import TilingParams, FilterParams, WholeSlideImage
+from unicorn_baseline.vision.pathology.models import Virchow_patch_tokens as Virchow
 
 
 def extract_coordinates(
@@ -413,7 +414,10 @@ def run_pathology_vision_task(
         )
 
     print("=+=" * 10)
-    feature_extractor = TITAN(model_dir)
+    if task_type in ["classification", "regression"]:
+        feature_extractor = TITAN(model_dir)
+    elif task_type in ["detection", "segmentation"]:
+        feature_extractor = Virchow(model_dir)
 
     # Extract tile or slide features
     feature = extract_features(
