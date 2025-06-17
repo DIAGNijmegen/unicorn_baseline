@@ -12,7 +12,7 @@ from PIL import Image
 
 from unicorn_baseline.io import resolve_image_path, write_json_file
 from unicorn_baseline.vision.pathology.feature_extraction import extract_features
-from unicorn_baseline.vision.pathology.models import TITAN
+from unicorn_baseline.vision.pathology.models import TITAN,PRISM
 from unicorn_baseline.vision.pathology.wsi import TilingParams, FilterParams, WholeSlideImage
 
 
@@ -320,6 +320,7 @@ def run_pathology_vision_task(
     task_type: str,
     input_information: dict[str, Any],
     model_dir: Path,
+    model_name: Path = "PRISM"  # or "TITAN", depending on the model you want to use
 ):
     tissue_mask_path = None
     for input_socket in input_information:
@@ -413,7 +414,15 @@ def run_pathology_vision_task(
         )
 
     print("=+=" * 10)
-    feature_extractor = TITAN(model_dir)
+    
+    if model_name == "TITAN":
+        print("Using TITAN model for feature extraction.")
+        feature_extractor = TITAN(model_dir)
+    elif model_name == "PRISM":
+        feature_extractor = PRISM(model_dir)  
+        print("Using PRISM model for feature extraction.")
+    else:
+        raise ValueError(f"Unknown model name: {model_name}. Use 'TITAN' or 'PRISM'.")
 
     # Extract tile or slide features
     feature = extract_features(

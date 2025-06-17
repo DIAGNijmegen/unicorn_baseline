@@ -56,10 +56,8 @@ def aggregate_slide_features(
     with torch.inference_mode():
         with autocast_context:
             wsi_feature = model.forward_slide(
-                tile_features,
-                coordinates,
-                tile_size_lv0=dataset.tile_size_lv0,
-            )
+                tile_features
+                )
     return wsi_feature.squeeze(0).cpu().tolist()
 
 

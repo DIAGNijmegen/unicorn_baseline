@@ -29,6 +29,7 @@ from transformers.modeling_outputs import (
     CausalLMOutputWithCrossAttentions,
 )
 from transformers.modeling_utils import PreTrainedModel
+from transformers.generation import GenerationMixin
 from transformers.models.biogpt.configuration_biogpt import BioGptConfig
 from transformers.utils import (
     add_code_sample_docstrings,
@@ -36,7 +37,6 @@ from transformers.utils import (
     add_start_docstrings_to_model_forward,
     logging,
 )
-
 logger = logging.get_logger(__name__)
 
 _CHECKPOINT_FOR_DOC = 'microsoft/biogpt'
@@ -669,7 +669,7 @@ class BioGptModel(BioGptPreTrainedModel):
     """BioGPT Model with a `language modeling` head on top for CLM fine-tuning.""",
     BIOGPT_START_DOCSTRING,
 )
-class BioGptForCausalLM(BioGptPreTrainedModel):
+class BioGptForCausalLM(BioGptPreTrainedModel, GenerationMixin):
     _tied_weights_keys = ['output_projection.weight']
 
     def __init__(self, config: BioGptConfig, x_attn_dim: Optional[int] = None):

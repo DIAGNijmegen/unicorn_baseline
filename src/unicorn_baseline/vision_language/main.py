@@ -5,7 +5,8 @@ from unicorn_baseline.io import resolve_image_path, write_json_file
 from unicorn_baseline.vision.pathology.main import extract_coordinates, save_coordinates
 from unicorn_baseline.vision.pathology.wsi import FilterParams, TilingParams
 from unicorn_baseline.vision_language.inference import generate_caption
-from unicorn_baseline.vision_language.models import PRISM, Virchow
+from unicorn_baseline.vision_language.models import PRISM
+from unicorn_baseline.vision.pathology.models import Virchow
 from transformers import MarianMTModel, MarianTokenizer
 
 
