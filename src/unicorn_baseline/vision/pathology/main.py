@@ -12,7 +12,7 @@ from PIL import Image
 
 from unicorn_baseline.io import resolve_image_path, write_json_file
 from unicorn_baseline.vision.pathology.feature_extraction import extract_features
-from unicorn_baseline.vision.pathology.models import TITAN,PRISM
+from unicorn_baseline.vision.pathology.models import TITAN, PRISM, Virchow
 from unicorn_baseline.vision.pathology.wsi import TilingParams, FilterParams, WholeSlideImage
 
 
@@ -319,8 +319,7 @@ def run_pathology_vision_task(
     task_name: str,
     task_type: str,
     input_information: dict[str, Any],
-    model_dir: Path,
-    model_name: Path = "PRISM"  # or "TITAN", depending on the model you want to use
+    model_dir: Path
 ):
     tissue_mask_path = None
     for input_socket in input_information:
@@ -348,12 +347,6 @@ def run_pathology_vision_task(
 
     detection_config = {
             "tiling_params": TilingParams(spacing=0.5, tolerance=0.07, tile_size=224, overlap=0, drop_holes=False, min_tissue_ratio=0.1, use_padding=True),
-            "filter_params": FilterParams(ref_tile_size=64, a_t=1, a_h=1, max_n_holes=8),
-        }
-
-    if task_name == 'Task08_detecting_mitotic_figures_in_breast_cancer_wsis':
-        detection_config = {
-            "tiling_params": TilingParams(spacing=0.25, tolerance=0.07, tile_size=448, overlap=0, drop_holes=False, min_tissue_ratio=0.1, use_padding=True),
             "filter_params": FilterParams(ref_tile_size=64, a_t=1, a_h=1, max_n_holes=8),
         }
 
@@ -415,14 +408,10 @@ def run_pathology_vision_task(
 
     print("=+=" * 10)
     
-    if model_name == "TITAN":
-        print("Using TITAN model for feature extraction.")
-        feature_extractor = TITAN(model_dir)
-    elif model_name == "PRISM":
-        feature_extractor = PRISM(model_dir)  
-        print("Using PRISM model for feature extraction.")
-    else:
-        raise ValueError(f"Unknown model name: {model_name}. Use 'TITAN' or 'PRISM'.")
+    if task_type in ["classification", "regression"]:
+        feature_extractor = PRISM(model_dir) #TITAN
+    elif task_type in ["detection", "segmentation"]:
+        feature_extractor = Virchow(model_dir, mode='patch_tokens')
 
     # Extract tile or slide features
     feature = extract_features(

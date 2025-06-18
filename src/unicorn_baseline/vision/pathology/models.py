@@ -96,10 +96,11 @@ class Virchow(nn.Module):
     Tile-level feature extractor.
     """
 
-    def __init__(self, model_dir, input_size=224):
+    def __init__(self, model_dir, input_size=224, mode="full"):
         super().__init__()
         self.model_dir = model_dir
         self.input_size = input_size
+        self.mode = mode
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Load model configuration
@@ -149,9 +150,18 @@ class Virchow(nn.Module):
         class_token = output[:, 0]
         patch_tokens = output[:, 1:]
         embedding = torch.cat([class_token, patch_tokens.mean(dim=1)], dim=-1)
-        return embedding
 
+        if self.mode == "full":
+            return embedding
+    
+        elif self.mode == "patch_tokens":
+            return patch_tokens
+        
+        elif self.mode == "class_token":
+            return class_token
 
+        else:
+            return embedding    
 
 
 class PRISM(SlideFeatureExtractor):
