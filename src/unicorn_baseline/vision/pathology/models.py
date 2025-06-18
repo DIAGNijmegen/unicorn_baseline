@@ -204,7 +204,7 @@ class PRISM(SlideFeatureExtractor):
         self.slide_encoder.eval()
 
         print(f"Building tile encoder ...")
-        self.tile_encoder = Virchow(model_dir=self.model_dir)
+        self.tile_encoder = Virchow(model_dir=self.model_dir, mode="full")
 
     def forward_slide(self,tile_features):
         """Generate slide-level captions from tile embeddings."""

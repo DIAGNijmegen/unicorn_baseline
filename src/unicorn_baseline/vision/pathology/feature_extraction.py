@@ -57,7 +57,7 @@ def aggregate_slide_features(
         with autocast_context:
             wsi_feature = model.forward_slide(
                 tile_features
-                )
+            )
     return wsi_feature.squeeze(0).cpu().tolist()
 
 

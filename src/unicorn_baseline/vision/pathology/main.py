@@ -12,7 +12,7 @@ from PIL import Image
 
 from unicorn_baseline.io import resolve_image_path, write_json_file
 from unicorn_baseline.vision.pathology.feature_extraction import extract_features
-from unicorn_baseline.vision.pathology.models import TITAN, PRISM, Virchow
+from unicorn_baseline.vision.pathology.models import PRISM, Virchow
 from unicorn_baseline.vision.pathology.wsi import TilingParams, FilterParams, WholeSlideImage
 
 
@@ -341,8 +341,8 @@ def run_pathology_vision_task(
 
     # coonfigurations for tile extraction based on tasks
     clf_config = {
-        "tiling_params": TilingParams(spacing=0.5, tolerance=0.07, tile_size=512, overlap=0.0, drop_holes=False, min_tissue_ratio=0.25, use_padding=True),
-        "filter_params": FilterParams(ref_tile_size=256, a_t=4, a_h=2, max_n_holes=8),
+        "tiling_params": TilingParams(spacing=0.5, tolerance=0.07, tile_size=224, overlap=0.0, drop_holes=False, min_tissue_ratio=0.25, use_padding=True),
+        "filter_params": FilterParams(ref_tile_size=224, a_t=4, a_h=2, max_n_holes=8),
     }
 
     detection_config = {
@@ -408,11 +408,8 @@ def run_pathology_vision_task(
 
     print("=+=" * 10)
     
-    if task_type in ["classification", "regression"]:
-        feature_extractor = PRISM(model_dir) #TITAN
-    elif task_type in ["detection", "segmentation"]:
-        feature_extractor = Virchow(model_dir, mode='patch_tokens')
-
+    feature_extractor = PRISM(model_dir) 
+    
     # Extract tile or slide features
     feature = extract_features(
         wsi_path=wsi_path,
