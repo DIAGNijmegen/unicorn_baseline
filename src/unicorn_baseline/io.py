@@ -13,10 +13,10 @@
 #  limitations under the License.
 
 import json
+import orjson
 from glob import glob
 from pathlib import Path
 from typing import Any
-
 import numpy as np
 
 
@@ -64,8 +64,8 @@ def sanitize_json_content(obj):
 def write_json_file(*, location, content):
     # Writes a json file with the sanitized content
     content = sanitize_json_content(content)
-    with open(location, "w") as f:
-        f.write(json.dumps(content, indent=4))
+    with open(location, "wb") as f:
+        f.write(orjson.dumps(content))
 
 
 def resolve_image_path(*, location: str | Path) -> Path:
