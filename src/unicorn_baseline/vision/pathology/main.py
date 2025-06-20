@@ -282,16 +282,31 @@ def save_feature_to_json(
         if image_direction is None:
             image_direction = np.identity(len(image_size)).flatten().tolist()
 
+        patches = []
+
+        features_np = feature.cpu().numpy()
+        
+        for coord, feat in zip(coordinates, features_np):
+
+            # check if feature is 2D (patch tokens) or 1D (CLS token)
+            if len(feat.shape) == 2:  # 2D: [num_patch_tokens, embedding_dim]
+                patches.extend([
+                    {
+                        "coordinates": [int(coord[0]), int(coord[1]), int(token_idx)],
+                        "features": feat[token_idx].tolist(),
+                    }
+                    for token_idx in range(feat.shape[0])
+                ])
+            else:  # 1D: [embedding_dim]
+                patches.append({
+                    "coordinates": [int(coord[0]), int(coord[1])],
+                    "features": feat.tolist(),
+                })
+
         output_dict = [
             {
-                "title": title,  # Use WSI filename as title
-                "patches": [
-                    {
-                        "coordinates": [int(coord[0]), int(coord[1])],
-                        "features": feat.cpu().tolist(),
-                    }
-                    for coord, feat in zip(coordinates, feature)
-                ],
+                "title": title,
+                "patches": patches,
                 "meta": {
                     "patch-size": tile_size,
                     "patch-spacing": [spacing, spacing],
