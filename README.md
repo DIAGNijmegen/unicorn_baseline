@@ -7,7 +7,6 @@ This repository provides reference implementations and tools for tackling a wide
 
 This baseline uses the following publicly available foundation models:
 
-- [TITAN](https://huggingface.co/MahmoodLab/TITAN) (link to [publication](https://arxiv.org/abs/2411.19666))
 - [Virchow](https://huggingface.co/paige-ai/Virchow)  (link to [publication](https://www.nature.com/articles/s41591-024-03141-0))
 - [PRISM](https://huggingface.co/paige-ai/Prism) (link to [publication](https://arxiv.org/abs/2405.10254))
 - [MRSegmentator](https://github.com/hhaentze/MRSegmentator/tree/master) (link to [publication](https://arxiv.org/pdf/2405.06463))
@@ -29,7 +28,9 @@ cd unicorn_baseline
 ```
 ### 2. Download Model Weights
 
-Download the required model weights and place them in the `model/` directory.
+> ⚠️ **Access Required**  
+> Some of the models used in the baseline are gated.  
+> You need to have **requested and been granted** access to be able to download them from Hugging Face.
 
 ```bash
 ./download_weights.sh
