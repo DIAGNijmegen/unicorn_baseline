@@ -417,7 +417,7 @@ def run_pathology_vision_task(
         "tiling_params": TilingParams(
             spacing=spacing,
             tolerance=tolerance,
-            tile_size=2tile_size24,
+            tile_size=tile_size,
             overlap=0.0,
             drop_holes=False,
             min_tissue_ratio=0.1,
