@@ -115,7 +115,7 @@ def run_vision_language_task(*, input_information, model_dir):
         save_dir=coordinates_dir,
     )
 
-    tile_encoder = Virchow(model_dir=model_dir)
+    tile_encoder = Virchow(model_dir=model_dir, mode="full")
     prism = PRISM(model_dir=model_dir)
 
     caption = generate_caption(

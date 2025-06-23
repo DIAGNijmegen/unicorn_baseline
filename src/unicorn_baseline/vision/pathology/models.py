@@ -96,7 +96,7 @@ class Virchow(nn.Module):
     Tile-level feature extractor.
     """
 
-    def __init__(self, model_dir, input_size=224, mode="full"):
+    def __init__(self, model_dir, mode: str, input_size=224):
         super().__init__()
         self.model_dir = model_dir
         self.input_size = input_size
@@ -153,16 +153,15 @@ class Virchow(nn.Module):
 
         if self.mode == "full":
             return embedding
-    
+
         elif self.mode == "patch_tokens":
             return patch_tokens
-        
+
         elif self.mode == "class_token":
             return class_token
 
         else:
-            return embedding    
-
+            raise ValueError(f"Unknown mode: {self.mode}. Choose from 'full', 'patch_tokens', or 'class_token'.")
 
 class PRISM(SlideFeatureExtractor):
     """

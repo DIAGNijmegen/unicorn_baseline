@@ -285,7 +285,7 @@ def save_feature_to_json(
         patches = []
 
         features_np = feature.cpu().numpy()
-        
+
         for coord, feat in zip(coordinates, features_np):
 
             # check if feature is 2D (patch tokens) or 1D (CLS token)
@@ -346,9 +346,11 @@ def run_pathology_vision_task(
 
     batch_size = 32
     use_mixed_precision = True
-    save_tiles_to_disk = False
-    tile_format = "jpg"
-    max_number_of_tiles = 14000
+
+    spacing = 0.5
+    tolerance = 0.07 # tolerance to consider two spacings equal (e.g. if tolerance is 0.10, any spacing between [0.45, 0.55] is considered equal to 0.5)
+    tile_size = 224
+    max_number_of_tiles = 30000 # limit number of tiles to comply with time limits and GPU memory
 
     num_workers = min(mp.cpu_count(), 8)
     if "SLURM_JOB_CPUS_PER_NODE" in os.environ:
@@ -356,17 +358,17 @@ def run_pathology_vision_task(
 
     # coonfigurations for tile extraction based on tasks
     clf_config = {
-        "tiling_params": TilingParams(spacing=0.5, tolerance=0.07, tile_size=224, overlap=0.0, drop_holes=False, min_tissue_ratio=0.25, use_padding=True),
-        "filter_params": FilterParams(ref_tile_size=224, a_t=4, a_h=2, max_n_holes=8),
+        "tiling_params": TilingParams(spacing=spacing, tolerance=tolerance, tile_size=tile_size, overlap=0.0, drop_holes=False, min_tissue_ratio=0.25, use_padding=True),
+        "filter_params": FilterParams(ref_tile_size=tile_size, a_t=4, a_h=2, max_n_holes=8),
     }
 
     detection_config = {
-            "tiling_params": TilingParams(spacing=0.5, tolerance=0.07, tile_size=224, overlap=0, drop_holes=False, min_tissue_ratio=0.1, use_padding=True),
+            "tiling_params": TilingParams(spacing=spacing, tolerance=tolerance, tile_size=tile_size, overlap=0.0, drop_holes=False, min_tissue_ratio=0.1, use_padding=True),
             "filter_params": FilterParams(ref_tile_size=64, a_t=1, a_h=1, max_n_holes=8),
         }
 
     segmentation_config = {
-        "tiling_params": TilingParams(spacing=0.5, tolerance=0.07, tile_size=224, overlap=0, drop_holes=False, min_tissue_ratio=0.1, use_padding=True),
+        "tiling_params": TilingParams(spacing=spacing, tolerance=tolerance, tile_size=tile_size, overlap=0.0, drop_holes=False, min_tissue_ratio=0.1, use_padding=True),
         "filter_params": FilterParams(ref_tile_size=64, a_t=1, a_h=1, max_n_holes=8),
     }
 
@@ -406,27 +408,12 @@ def run_pathology_vision_task(
         save_dir=coordinates_dir,
     )
 
-    tile_dir = None
-    if save_tiles_to_disk:
-        tile_dir = Path("/tmp/tiles/")
-        tile_dir.mkdir(parents=True, exist_ok=True)
-        save_tiles(
-            wsi_path=wsi_path,
-            coordinates=coordinates,
-            tile_level=level,
-            tile_size=config["tiling_params"].tile_size,
-            resize_factor=resize_factor,
-            save_dir=tile_dir,
-            tile_format=tile_format,
-            num_workers=num_workers,
-        )
-
     print("=+=" * 10)
-    
+
     if task_type in ["classification", "regression"]:
         feature_extractor = PRISM(model_dir)
     elif task_type in ["detection", "segmentation"]:
-        feature_extractor = Virchow(model_dir, mode='patch_tokens')
+        feature_extractor = Virchow(model_dir, mode="class_token")
 
     # Extract tile or slide features
     feature = extract_features(
@@ -438,16 +425,12 @@ def run_pathology_vision_task(
         batch_size=batch_size,
         num_workers=num_workers,
         use_mixed_precision=use_mixed_precision,
-        load_tiles_from_disk=save_tiles_to_disk,
-        tile_dir=tile_dir,
-        tile_format=tile_format,
     )
 
     if task_type in ["classification", "regression"]:
         save_feature_to_json(feature=feature, task_type=task_type, title=image_title)
     elif task_type in ["detection", "segmentation"]:
         tile_size = [config["tiling_params"].tile_size, config["tiling_params"].tile_size, 3]
-
         save_feature_to_json(
             feature=feature,
             task_type=task_type,
