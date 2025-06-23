@@ -6,7 +6,10 @@ import torch.nn.functional as F
 from torch import Tensor, einsum, nn
 from transformers import PreTrainedModel
 from transformers.generation.utils import GenerateOutput
-from transformers.utils import add_start_docstrings, add_start_docstrings_to_model_forward
+from transformers.utils import (
+    add_start_docstrings,
+    add_start_docstrings_to_model_forward,
+)
 
 from unicorn_baseline.vision_language.prism.biogpt import BioGPT
 from unicorn_baseline.vision_language.prism.configuring_prism import PrismConfig
@@ -136,8 +139,12 @@ class Prism(PreTrainedModel):
 
         # Contrastive Head
 
-        self.img_to_latents = EmbedToLatents(self.image_resampler.query_dim, config.dim_latents)
-        self.text_to_latents = EmbedToLatents(self.text_decoder.text_dim, config.dim_latents)
+        self.img_to_latents = EmbedToLatents(
+            self.image_resampler.query_dim, config.dim_latents
+        )
+        self.text_to_latents = EmbedToLatents(
+            self.text_decoder.text_dim, config.dim_latents
+        )
 
         self.temperature = nn.Parameter(torch.log(torch.tensor(1.0) / 0.07))
 
@@ -167,7 +174,7 @@ class Prism(PreTrainedModel):
 
         decoder_out = self.text_decoder(
             input_ids=input_ids,
-            key_value_states=resampler_out['image_latents'],
+            key_value_states=resampler_out["image_latents"],
             attention_mask=attention_mask,
             head_mask=head_mask,
             past_key_values=past_key_values,
@@ -176,21 +183,21 @@ class Prism(PreTrainedModel):
 
         # embeddings to projections on a hypersphere
 
-        text_proj = self.text_to_latents(decoder_out['text_embedding'])
-        image_proj = self.img_to_latents(resampler_out['image_embedding'])
+        text_proj = self.text_to_latents(decoder_out["text_embedding"])
+        image_proj = self.img_to_latents(resampler_out["image_embedding"])
 
         # text-image similarity
 
-        sim = einsum('i d, j d -> i j', text_proj, image_proj)
+        sim = einsum("i d, j d -> i j", text_proj, image_proj)
         sim = sim * self.temperature.exp()
         assert sim.shape[0] == sim.shape[1]
 
         return {
-            'logits': decoder_out['logits'],
-            'text_embedding': decoder_out['text_embedding'],
-            'image_embedding': resampler_out['image_embedding'],
-            'image_latents': resampler_out['image_latents'],
-            'sim': sim,
+            "logits": decoder_out["logits"],
+            "text_embedding": decoder_out["text_embedding"],
+            "image_embedding": resampler_out["image_embedding"],
+            "image_latents": resampler_out["image_latents"],
+            "sim": sim,
         }
 
     def tokenize(self, text: list[str]) -> Tensor:
@@ -232,13 +239,17 @@ class Prism(PreTrainedModel):
                 [this paper](https://arxiv.org/pdf/1610.02424.pdf) for more details.
         """
         if key_value_states is None:
-            raise Exception('image latents (key_value_states) are required for generation.')
+            raise Exception(
+                "image latents (key_value_states) are required for generation."
+            )
 
         batch_size = len(key_value_states)
         device = key_value_states.device
 
         if inputs is None:
-            inputs = torch.tensor([[self.text_decoder.bos_token_id]] * batch_size, device=device)
+            inputs = torch.tensor(
+                [[self.text_decoder.bos_token_id]] * batch_size, device=device
+            )
 
         return self.text_decoder.model.generate(
             inputs=inputs,
@@ -292,11 +303,11 @@ class Prism(PreTrainedModel):
 
         # zero-shot probabilities
 
-        text_proj = self.text_to_latents(decoder_out['text_embedding'])
+        text_proj = self.text_to_latents(decoder_out["text_embedding"])
         image_proj = self.img_to_latents(image_embeds)
 
         # (Bi, Bn + Bp)
-        sim = einsum('i d, j d -> i j', image_proj, text_proj)  # (image, text)
+        sim = einsum("i d, j d -> i j", image_proj, text_proj)  # (image, text)
         sim = sim * self.temperature.exp()
 
         assert sim.shape[0] == len(image_embeds)

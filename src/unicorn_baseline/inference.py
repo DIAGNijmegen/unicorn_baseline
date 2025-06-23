@@ -45,6 +45,7 @@ INPUT_PATH = Path("/input")
 OUTPUT_PATH = Path("/output")
 MODEL_PATH = Path("/opt/ml/model")
 
+
 def print_directory_contents(path: Path | str):
     path = Path(path)
     for child in path.iterdir():

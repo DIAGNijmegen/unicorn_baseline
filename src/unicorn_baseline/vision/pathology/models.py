@@ -1,5 +1,5 @@
 from pathlib import Path
-import os 
+import os
 import json
 
 import torch
@@ -68,7 +68,7 @@ class TITAN(SlideFeatureExtractor):
         self.slide_encoder_weights = torch.load(checkpoint_path)
         updated_sd, msg = update_state_dict(
             model_dict=self.slide_encoder.state_dict(),
-            state_dict=self.slide_encoder_weights
+            state_dict=self.slide_encoder_weights,
         )
         self.slide_encoder.load_state_dict(updated_sd, strict=True)
         print(msg)
@@ -88,7 +88,6 @@ class TITAN(SlideFeatureExtractor):
             tile_features, tile_coordinates, tile_size_lv0
         )
         return output
-
 
 
 class Virchow(nn.Module):
@@ -153,26 +152,26 @@ class Virchow(nn.Module):
 
         if self.mode == "full":
             return embedding
-    
+
         elif self.mode == "patch_tokens":
             return patch_tokens
-        
+
         elif self.mode == "class_token":
             return class_token
 
         else:
-            return embedding    
+            return embedding
 
 
 class PRISM(SlideFeatureExtractor):
     """
     Slide-level feature extractor (PRISM model).
     """
-    def __init__(self, model_dir: Path, input_size = 224):
+
+    def __init__(self, model_dir: Path, input_size=224):
         self.model_dir = model_dir
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         super(PRISM, self).__init__(input_size)
-
 
     def build_encoders(self):
         import sys
@@ -194,9 +193,12 @@ class PRISM(SlideFeatureExtractor):
 
         checkpoint_path = self.model_dir / "prism-slide-encoder.pth"
         print(f"Loading slide encoder weights from {checkpoint_path}...")
-        self.slide_encoder_weights = torch.load(checkpoint_path, map_location=self.device)
+        self.slide_encoder_weights = torch.load(
+            checkpoint_path, map_location=self.device
+        )
         updated_sd, msg = update_state_dict(
-            model_dict=self.slide_encoder.state_dict(), state_dict=self.slide_encoder_weights
+            model_dict=self.slide_encoder.state_dict(),
+            state_dict=self.slide_encoder_weights,
         )
         print(msg)
         self.slide_encoder.load_state_dict(updated_sd, strict=True)
@@ -206,10 +208,9 @@ class PRISM(SlideFeatureExtractor):
         print(f"Building tile encoder ...")
         self.tile_encoder = Virchow(model_dir=self.model_dir, mode="full")
 
-    def forward_slide(self,tile_features):
+    def forward_slide(self, tile_features):
         """Generate slide-level captions from tile embeddings."""
         tile_features = tile_features.unsqueeze(0)
         reprs = self.slide_encoder.slide_representations(tile_features)
         output = reprs["image_embedding"]  # [1, 1280]
         return output
-

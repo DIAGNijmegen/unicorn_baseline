@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" PyTorch BioGPT model."""
+"""PyTorch BioGPT model."""
 
 
 import math
@@ -37,15 +37,16 @@ from transformers.utils import (
     add_start_docstrings_to_model_forward,
     logging,
 )
+
 logger = logging.get_logger(__name__)
 
-_CHECKPOINT_FOR_DOC = 'microsoft/biogpt'
-_CONFIG_FOR_DOC = 'BioGptConfig'
+_CHECKPOINT_FOR_DOC = "microsoft/biogpt"
+_CONFIG_FOR_DOC = "BioGptConfig"
 
 
 BIOGPT_PRETRAINED_MODEL_ARCHIVE_LIST = [
-    'microsoft/biogpt',
-    'microsoft/BioGPT-Large',
+    "microsoft/biogpt",
+    "microsoft/BioGPT-Large",
     # See all BioGPT models at https://huggingface.co/models?filter=biogpt
 ]
 
@@ -62,7 +63,9 @@ class BioGptLearnedPositionalEmbedding(nn.Embedding):
         self.offset = 2
         super().__init__(num_embeddings + self.offset, embedding_dim)
 
-    def forward(self, attention_mask: torch.LongTensor, past_key_values_length: int = 0):
+    def forward(
+        self, attention_mask: torch.LongTensor, past_key_values_length: int = 0
+    ):
         """`input_ids_shape` is expected to be [bsz x seqlen]."""
         attention_mask = attention_mask.long()
 
@@ -101,8 +104,8 @@ class BioGptAttention(nn.Module):
 
         if (self.head_dim * num_heads) != self.embed_dim:
             raise ValueError(
-                f'embed_dim must be divisible by num_heads (got `embed_dim`: {self.embed_dim}'
-                f' and `num_heads`: {num_heads}).'
+                f"embed_dim must be divisible by num_heads (got `embed_dim`: {self.embed_dim}"
+                f" and `num_heads`: {num_heads})."
             )
         self.scaling = self.head_dim**-0.5
         self.is_decoder = is_decoder
@@ -114,7 +117,11 @@ class BioGptAttention(nn.Module):
         self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
     def _shape(self, tensor: torch.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2).contiguous()
+        return (
+            tensor.view(bsz, seq_len, self.num_heads, self.head_dim)
+            .transpose(1, 2)
+            .contiguous()
+        )
 
     def forward(
         self,
@@ -182,16 +189,19 @@ class BioGptAttention(nn.Module):
 
         if attn_weights.size() != (bsz * self.num_heads, tgt_len, src_len):
             raise ValueError(
-                f'Attention weights should be of size {(bsz * self.num_heads, tgt_len, src_len)}, but is'
-                f' {attn_weights.size()}'
+                f"Attention weights should be of size {(bsz * self.num_heads, tgt_len, src_len)}, but is"
+                f" {attn_weights.size()}"
             )
 
         if attention_mask is not None:
             if attention_mask.size() != (bsz, 1, tgt_len, src_len):
                 raise ValueError(
-                    f'Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is {attention_mask.size()}'
+                    f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is {attention_mask.size()}"
                 )
-            attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
+            attn_weights = (
+                attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
+                + attention_mask
+            )
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
         attn_weights = nn.functional.softmax(attn_weights, dim=-1)
@@ -199,8 +209,8 @@ class BioGptAttention(nn.Module):
         if layer_head_mask is not None:
             if layer_head_mask.size() != (self.num_heads,):
                 raise ValueError(
-                    f'Head mask for a single layer should be of size {(self.num_heads,)}, but is'
-                    f' {layer_head_mask.size()}'
+                    f"Head mask for a single layer should be of size {(self.num_heads,)}, but is"
+                    f" {layer_head_mask.size()}"
                 )
             attn_weights = layer_head_mask.view(1, -1, 1, 1) * attn_weights.view(
                 bsz, self.num_heads, tgt_len, src_len
@@ -212,19 +222,25 @@ class BioGptAttention(nn.Module):
             # make sure that attn_weights keeps its gradient.
             # In order to do so, attn_weights have to be reshaped
             # twice and have to be reused in the following
-            attn_weights_reshaped = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
-            attn_weights = attn_weights_reshaped.view(bsz * self.num_heads, tgt_len, src_len)
+            attn_weights_reshaped = attn_weights.view(
+                bsz, self.num_heads, tgt_len, src_len
+            )
+            attn_weights = attn_weights_reshaped.view(
+                bsz * self.num_heads, tgt_len, src_len
+            )
         else:
             attn_weights_reshaped = None
 
-        attn_probs = nn.functional.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = nn.functional.dropout(
+            attn_weights, p=self.dropout, training=self.training
+        )
 
         attn_output = torch.bmm(attn_probs, value_states)
 
         if attn_output.size() != (bsz * self.num_heads, tgt_len, self.head_dim):
             raise ValueError(
-                f'`attn_output` should be of size {(bsz * self.num_heads, tgt_len, self.head_dim)}, but is'
-                f' {attn_output.size()}'
+                f"`attn_output` should be of size {(bsz * self.num_heads, tgt_len, self.head_dim)}, but is"
+                f" {attn_output.size()}"
             )
 
         attn_output = attn_output.view(bsz, self.num_heads, tgt_len, self.head_dim)
@@ -241,7 +257,10 @@ class BioGptAttention(nn.Module):
 
 class BioGptDecoderLayer(nn.Module):
     def __init__(
-        self, config: BioGptConfig, is_xattn: bool = False, x_attn_dim: Optional[int] = None
+        self,
+        config: BioGptConfig,
+        is_xattn: bool = False,
+        x_attn_dim: Optional[int] = None,
     ):
         super().__init__()
         self.embed_dim = config.hidden_size
@@ -310,7 +329,9 @@ class BioGptDecoderLayer(nn.Module):
 
         # Self Attention
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
-        self_attn_past_key_value = past_key_value[:2] if past_key_value is not None else None
+        self_attn_past_key_value = (
+            past_key_value[:2] if past_key_value is not None else None
+        )
         # add present self-attn cache to positions 1,2 of present_key_value tuple
         hidden_states, self_attn_weights, present_key_value = self.self_attn(
             hidden_states=hidden_states,
@@ -320,7 +341,9 @@ class BioGptDecoderLayer(nn.Module):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(
+            hidden_states, p=self.dropout, training=self.training
+        )
         hidden_states = residual + hidden_states
 
         # xattn
@@ -352,7 +375,9 @@ class BioGptDecoderLayer(nn.Module):
             hidden_states, p=self.activation_dropout, training=self.training
         )
         hidden_states = self.fc2(hidden_states)
-        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(
+            hidden_states, p=self.dropout, training=self.training
+        )
         hidden_states = residual + hidden_states
 
         outputs = (hidden_states,)
@@ -373,7 +398,7 @@ class BioGptPreTrainedModel(PreTrainedModel):
     """
 
     config_class = BioGptConfig
-    base_model_prefix = 'biogpt'
+    base_model_prefix = "biogpt"
     supports_gradient_checkpointing = True
 
     def _init_weights(self, module):
@@ -462,7 +487,7 @@ CollectAttn = Callable[[int, Tensor | None], None]
 
 
 @add_start_docstrings(
-    'The bare BioGPT Model transformer outputting raw hidden-states without any specific head on top.',
+    "The bare BioGPT Model transformer outputting raw hidden-states without any specific head on top.",
     BIOGPT_START_DOCSTRING,
 )
 class BioGptModel(BioGptPreTrainedModel):
@@ -473,9 +498,13 @@ class BioGptModel(BioGptPreTrainedModel):
         self.dropout = config.hidden_dropout_prob
         self.embed_dim = config.hidden_size
         self.padding_idx = config.pad_token_id
-        self.embed_scale = math.sqrt(config.hidden_size) if config.scale_embedding else 1.0
+        self.embed_scale = (
+            math.sqrt(config.hidden_size) if config.scale_embedding else 1.0
+        )
 
-        self.embed_tokens = nn.Embedding(config.vocab_size, self.embed_dim, self.padding_idx)
+        self.embed_tokens = nn.Embedding(
+            config.vocab_size, self.embed_dim, self.padding_idx
+        )
         self.embed_positions = BioGptLearnedPositionalEmbedding(
             config.max_position_embeddings, self.embed_dim
         )
@@ -484,7 +513,9 @@ class BioGptModel(BioGptPreTrainedModel):
         self.layers = nn.ModuleList(
             [
                 BioGptDecoderLayer(
-                    config, is_xattn=(i >= self.first_x_attn_layer), x_attn_dim=x_attn_dim
+                    config,
+                    is_xattn=(i >= self.first_x_attn_layer),
+                    x_attn_dim=x_attn_dim,
                 )
                 for i in range(config.num_hidden_layers)
             ]
@@ -502,7 +533,7 @@ class BioGptModel(BioGptPreTrainedModel):
         self.embed_tokens = value
 
     @add_start_docstrings_to_model_forward(
-        BIOGPT_INPUTS_DOCSTRING.format('batch_size, sequence_length')
+        BIOGPT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
     )
     @add_code_sample_docstrings(
         checkpoint=_CHECKPOINT_FOR_DOC,
@@ -524,7 +555,9 @@ class BioGptModel(BioGptPreTrainedModel):
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]:
         output_attentions = (
-            output_attentions if output_attentions is not None else self.config.output_attentions
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
         )
         output_hidden_states = (
             output_hidden_states
@@ -532,11 +565,15 @@ class BioGptModel(BioGptPreTrainedModel):
             else self.config.output_hidden_states
         )
         use_cache = use_cache if use_cache is not None else self.config.use_cache
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         # retrieve input_ids and inputs_embeds
         if input_ids is not None and inputs_embeds is not None:
-            raise ValueError('You cannot specify both input_ids and inputs_embeds at the same time')
+            raise ValueError(
+                "You cannot specify both input_ids and inputs_embeds at the same time"
+            )
         elif input_ids is not None:
             input = input_ids
             input_shape = input.size()
@@ -544,7 +581,7 @@ class BioGptModel(BioGptPreTrainedModel):
             input_shape = inputs_embeds.size()[:-1]
             # input = inputs_embeds[:, :, -1]  # Why does this exist?
         else:
-            raise ValueError('You have to specify either input_ids or inputs_embeds')
+            raise ValueError("You have to specify either input_ids or inputs_embeds")
 
         # past_key_values_length
         past_key_values_length = (
@@ -557,14 +594,17 @@ class BioGptModel(BioGptPreTrainedModel):
 
         if attention_mask is None:
             attention_mask = torch.ones(
-                (inputs_embeds.shape[0], inputs_embeds.shape[1] + past_key_values_length),
+                (
+                    inputs_embeds.shape[0],
+                    inputs_embeds.shape[1] + past_key_values_length,
+                ),
                 dtype=torch.bool,
                 device=inputs_embeds.device,
             )
         elif attention_mask.shape[1] != past_key_values_length + input_shape[1]:
             raise ValueError(
-                f'The provided attention mask has length {attention_mask.shape[1]}, but its length should be '
-                f'{past_key_values_length + input_shape[1]} (sum of the lengths of current and past inputs)'
+                f"The provided attention mask has length {attention_mask.shape[1]}, but its length should be "
+                f"{past_key_values_length + input_shape[1]} (sum of the lengths of current and past inputs)"
             )
 
         # embed positions
@@ -576,12 +616,14 @@ class BioGptModel(BioGptPreTrainedModel):
 
         hidden_states = inputs_embeds + positions
 
-        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = nn.functional.dropout(
+            hidden_states, p=self.dropout, training=self.training
+        )
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
                 logger.warning_once(
-                    '`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`...'
+                    "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
                 )
                 use_cache = False
 
@@ -599,7 +641,9 @@ class BioGptModel(BioGptPreTrainedModel):
                 if dropout_probability < self.layerdrop:
                     continue
 
-            past_key_value = past_key_values[idx] if past_key_values is not None else None
+            past_key_value = (
+                past_key_values[idx] if past_key_values is not None else None
+            )
 
             if self.gradient_checkpointing and self.training:
                 layer_outputs, attn = self._gradient_checkpointing_func(
@@ -670,13 +714,15 @@ class BioGptModel(BioGptPreTrainedModel):
     BIOGPT_START_DOCSTRING,
 )
 class BioGptForCausalLM(BioGptPreTrainedModel, GenerationMixin):
-    _tied_weights_keys = ['output_projection.weight']
+    _tied_weights_keys = ["output_projection.weight"]
 
     def __init__(self, config: BioGptConfig, x_attn_dim: Optional[int] = None):
         super().__init__(config)
 
         self.biogpt = BioGptModel(config, x_attn_dim=x_attn_dim)
-        self.output_projection = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+        self.output_projection = nn.Linear(
+            config.hidden_size, config.vocab_size, bias=False
+        )
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -688,7 +734,7 @@ class BioGptForCausalLM(BioGptPreTrainedModel, GenerationMixin):
         self.output_projection = new_embeddings
 
     @add_start_docstrings_to_model_forward(
-        BIOGPT_INPUTS_DOCSTRING.format('batch_size, sequence_length')
+        BIOGPT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
     )
     @add_code_sample_docstrings(
         checkpoint=_CHECKPOINT_FOR_DOC,
@@ -716,7 +762,9 @@ class BioGptForCausalLM(BioGptPreTrainedModel, GenerationMixin):
             `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
             are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         outputs = self.biogpt(
             input_ids,
@@ -742,7 +790,8 @@ class BioGptForCausalLM(BioGptPreTrainedModel, GenerationMixin):
             labels = labels[:, 1:].contiguous()
             loss_fct = CrossEntropyLoss()
             lm_loss = loss_fct(
-                shifted_prediction_scores.view(-1, self.config.vocab_size), labels.view(-1)
+                shifted_prediction_scores.view(-1, self.config.vocab_size),
+                labels.view(-1),
             )
 
         if not return_dict:
@@ -759,7 +808,12 @@ class BioGptForCausalLM(BioGptPreTrainedModel, GenerationMixin):
         )
 
     def prepare_inputs_for_generation(
-        self, input_ids, attention_mask, inputs_embeds=None, past_key_values=None, **kwargs
+        self,
+        input_ids,
+        attention_mask,
+        inputs_embeds=None,
+        past_key_values=None,
+        **kwargs,
     ):
         # only last tokens for inputs_ids if past is defined in kwargs
         if past_key_values is not None:
@@ -775,16 +829,16 @@ class BioGptForCausalLM(BioGptPreTrainedModel, GenerationMixin):
             input_ids = input_ids[:, remove_prefix_length:]
 
         if inputs_embeds is not None and past_key_values is None:
-            model_inputs = {'inputs_embeds': inputs_embeds}
+            model_inputs = {"inputs_embeds": inputs_embeds}
         else:
-            model_inputs = {'input_ids': input_ids}
+            model_inputs = {"input_ids": input_ids}
 
         model_inputs.update(
             {
-                'attention_mask': attention_mask,
-                'past_key_values': past_key_values,
-                'use_cache': kwargs.get('use_cache'),
-                'key_value_states': kwargs.get('key_value_states'),
+                "attention_mask": attention_mask,
+                "past_key_values": past_key_values,
+                "use_cache": kwargs.get("use_cache"),
+                "key_value_states": kwargs.get("key_value_states"),
             }
         )
 

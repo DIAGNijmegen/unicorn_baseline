@@ -15,17 +15,17 @@ from unicorn_baseline.vision_language.prism.configuring_prism import PerceiverCo
 
 env = Env()
 
-PERCEIVER_MEM_EFF_ATTN: bool = env.bool('PERCEIVER_MEM_EFF_ATTN', default=False)
+PERCEIVER_MEM_EFF_ATTN: bool = env.bool("PERCEIVER_MEM_EFF_ATTN", default=False)
 if PERCEIVER_MEM_EFF_ATTN:
-    warnings.warn('Perceiver: using memory-efficient attention')
+    warnings.warn("Perceiver: using memory-efficient attention")
 
 try:
     from xformers.ops import memory_efficient_attention  # type: ignore
 except ImportError:
     if PERCEIVER_MEM_EFF_ATTN:
         raise Exception(
-            'Memory efficient attention flag is set (PERCEIVER_MEM_EFF_ATTN) '
-            'but xformers lib is not available.'
+            "Memory efficient attention flag is set (PERCEIVER_MEM_EFF_ATTN) "
+            "but xformers lib is not available."
         )
     pass
 
@@ -103,13 +103,13 @@ class CrossAttention(nn.Module):
             Bc, Nc, _, _ = k.shape
             assert (Bc, Nc) == (v.shape[0], v.shape[1])
         else:
-            raise Exception(f'XOR(c, kvt) but got: {type(c)} and {type(kvt)}.')
+            raise Exception(f"XOR(c, kvt) but got: {type(c)} and {type(kvt)}.")
 
         if attn_mask is not None:
             attn_mask = attn_mask.reshape(Bc, 1, Nx, Nc).expand(-1, self.heads, -1, -1)
 
         if self.return_attn:
-            warnings.warn('XATTN RETURNS ATTN SCORES, ONLY FOR EVAL!')
+            warnings.warn("XATTN RETURNS ATTN SCORES, ONLY FOR EVAL!")
             q = q.permute(0, 2, 1, 3)
             k = k.permute(0, 2, 1, 3)
             v = v.permute(0, 2, 1, 3)
@@ -146,7 +146,9 @@ class CrossAttention(nn.Module):
             q = q.permute(0, 2, 1, 3)
             k = k.permute(0, 2, 1, 3)
             v = v.permute(0, 2, 1, 3)
-            with sdp_kernel(enable_flash=False, enable_math=True, enable_mem_efficient=False):
+            with sdp_kernel(
+                enable_flash=False, enable_math=True, enable_mem_efficient=False
+            ):
                 a: Tensor = F.scaled_dot_product_attention(q, k, v, attn_mask=attn_mask)
                 attn = torch.empty(0)
             a = a.transpose(1, 2)
@@ -180,7 +182,9 @@ class MHSA(nn.Module):
         x = self.norm(x)
 
         with sdp_kernel(
-            enable_flash=False, enable_math=True, enable_mem_efficient=PERCEIVER_MEM_EFF_ATTN
+            enable_flash=False,
+            enable_math=True,
+            enable_mem_efficient=PERCEIVER_MEM_EFF_ATTN,
         ):
             x, _ = self.mha(
                 x,
@@ -212,7 +216,7 @@ class FeedForward(nn.Module):
         dim: int,
         mult: int = 1,
         dropout: float = 0.0,
-        activation: str = 'geglu',
+        activation: str = "geglu",
     ):
         super().__init__()
 
@@ -220,13 +224,13 @@ class FeedForward(nn.Module):
 
         extra_dim = 1
 
-        if activation == 'geglu':
+        if activation == "geglu":
             actfn = GEGLU
             extra_dim = 2
-        elif activation == 'gelu':
+        elif activation == "gelu":
             actfn = nn.GELU
         else:
-            raise Exception(f'{activation=} not supported.')
+            raise Exception(f"{activation=} not supported.")
 
         self.net = nn.Sequential(
             nn.Linear(dim, dim * mult * extra_dim),
@@ -253,7 +257,7 @@ class Perceiver(nn.Module):
         share_tf_start_layer: int = 0,
         xattn_heads: int = 1,
         mlp_mult: int = 1,
-        mlp_activation: str = 'geglu',
+        mlp_activation: str = "geglu",
     ):
         super().__init__()
 
@@ -273,7 +277,7 @@ class Perceiver(nn.Module):
 
         get_xattn = lambda: nn.ModuleDict(
             {
-                'xattn': CrossAttention(
+                "xattn": CrossAttention(
                     query_dim=latent_dim,
                     context_dim=context_dim,
                     head_dim=latent_dim // xattn_heads,
@@ -282,7 +286,7 @@ class Perceiver(nn.Module):
                     # norming large contexts explodes memory
                     c_norm=False,
                 ),
-                'ff': FeedForward(
+                "ff": FeedForward(
                     dim=latent_dim,
                     mult=mlp_mult,
                     activation=mlp_activation,
@@ -292,11 +296,11 @@ class Perceiver(nn.Module):
 
         get_mhsa = lambda: nn.ModuleDict(
             {
-                'mhsa': MHSA(
+                "mhsa": MHSA(
                     dim=latent_dim,
                     num_heads=mhsa_heads,
                 ),
-                'ff': FeedForward(
+                "ff": FeedForward(
                     dim=latent_dim,
                     mult=mlp_mult,
                     activation=mlp_activation,
@@ -304,17 +308,23 @@ class Perceiver(nn.Module):
             }
         )
 
-        get_transformer = lambda: nn.ModuleList([get_mhsa() for _ in range(transformer_depth)])
+        get_transformer = lambda: nn.ModuleList(
+            [get_mhsa() for _ in range(transformer_depth)]
+        )
 
         layers = []
         for i in range(perceiver_depth):
             layer = nn.ModuleDict(
                 {
-                    'xattn': (
-                        get_xattn() if i <= self.share_xattn_start_layer else layers[-1]['xattn']
+                    "xattn": (
+                        get_xattn()
+                        if i <= self.share_xattn_start_layer
+                        else layers[-1]["xattn"]
                     ),
-                    'tf': (
-                        get_transformer() if i <= self.share_tf_start_layer else layers[-1]['tf']
+                    "tf": (
+                        get_transformer()
+                        if i <= self.share_tf_start_layer
+                        else layers[-1]["tf"]
                     ),
                 }
             )
@@ -345,21 +355,25 @@ class Perceiver(nn.Module):
 
         kvt = None
         for i, l in enumerate(self.layers):
-            xattn = l['xattn']  # type: ignore
+            xattn = l["xattn"]  # type: ignore
             if i <= self.share_xattn_start_layer:
                 # pass context, return key-value cache
-                xattn_out, kvt, _ = xattn['xattn'](x, c=context, kvt=None, attn_mask=attn_mask)
+                xattn_out, kvt, _ = xattn["xattn"](
+                    x, c=context, kvt=None, attn_mask=attn_mask
+                )
             else:
                 # pass key-value cache since the previous layer shares W_k and W_v with this one
-                xattn_out, kvt, _ = xattn['xattn'](x, c=None, kvt=kvt, attn_mask=attn_mask)
+                xattn_out, kvt, _ = xattn["xattn"](
+                    x, c=None, kvt=kvt, attn_mask=attn_mask
+                )
 
             x = xattn_out + x
-            x = xattn['ff'](x) + x
+            x = xattn["ff"](x) + x
 
-            tf = l['tf']  # type: ignore
+            tf = l["tf"]  # type: ignore
             for mhsa in tf:
-                x = mhsa['mhsa'](x) + x
-                x = mhsa['ff'](x) + x
+                x = mhsa["mhsa"](x) + x
+                x = mhsa["ff"](x) + x
 
         return x
 
@@ -413,7 +427,7 @@ class PerceiverResampler(nn.Module):
 
         if tile_mask is None:
             if batch_size > 1:
-                raise Exception('tile pad mask must be provided with batch size>1.')
+                raise Exception("tile pad mask must be provided with batch size>1.")
 
             tile_mask = torch.ones(
                 tile_embeddings.shape[:2], device=device, dtype=tile_embeddings.dtype
@@ -429,4 +443,4 @@ class PerceiverResampler(nn.Module):
         cls_emb = self.cls_norm(cls_emb)
         img_emb = self.img_norm(img_emb)
 
-        return {'image_embedding': cls_emb, 'image_latents': img_emb}
+        return {"image_embedding": cls_emb, "image_latents": img_emb}

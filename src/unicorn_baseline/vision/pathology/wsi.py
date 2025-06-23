@@ -143,7 +143,8 @@ class WholeSlideImage(object):
             spacings = self.wsi.spacings
         else:
             spacings = [
-                self.spacing_at_lvl_0 * s / self.wsi.spacings[0] for s in self.wsi.spacings
+                self.spacing_at_lvl_0 * s / self.wsi.spacings[0]
+                for s in self.wsi.spacings
             ]
         return spacings
 
@@ -161,7 +162,9 @@ class WholeSlideImage(object):
             self._level_spacing_cache[level] = self.spacings[level]
         return self._level_spacing_cache[level]
 
-    def get_best_level_for_spacing(self, target_spacing: float, tolerance: float, verbose: bool = False):
+    def get_best_level_for_spacing(
+        self, target_spacing: float, tolerance: float, verbose: bool = False
+    ):
         """
         Determines the best level in a multi-resolution image pyramid for a given target spacing.
 
@@ -197,10 +200,15 @@ class WholeSlideImage(object):
                     is_within_tolerance = True
                     break
 
-        if not abs(level_spacing - target_spacing) / target_spacing <= tolerance and verbose:
+        if (
+            not abs(level_spacing - target_spacing) / target_spacing <= tolerance
+            and verbose
+        ):
             with _warning_lock:
                 if not _printed_warning:
-                    print(f"Unable to find a spacing within {tolerance:.0%} of the target spacing ({target_spacing:.2f}). Resampling from {level_spacing:.2f} instead.")
+                    print(
+                        f"Unable to find a spacing within {tolerance:.0%} of the target spacing ({target_spacing:.2f}). Resampling from {level_spacing:.2f} instead."
+                    )
                     _printed_warning = True
 
         return level, is_within_tolerance
@@ -244,7 +252,9 @@ class WholeSlideImage(object):
         seg_spacing = self.get_level_spacing(seg_level)
 
         mask_downsample = seg_spacing / mask_spacing_at_level_0
-        mask_level = int(np.argmin([abs(x - mask_downsample) for x in self.mask.downsamplings]))
+        mask_level = int(
+            np.argmin([abs(x - mask_downsample) for x in self.mask.downsamplings])
+        )
         mask_spacing = self.mask.spacings[mask_level]
 
         scale = seg_spacing / mask_spacing
@@ -256,7 +266,11 @@ class WholeSlideImage(object):
         mask = self.mask.get_slide(spacing=mask_spacing)
         width, height, _ = mask.shape
         # resize the mask to the size of the slide at seg_spacing
-        mask = cv2.resize(mask.astype(np.uint8), (int(height / scale), int(width / scale)), interpolation=cv2.INTER_NEAREST)
+        mask = cv2.resize(
+            mask.astype(np.uint8),
+            (int(height / scale), int(width / scale)),
+            interpolation=cv2.INTER_NEAREST,
+        )
 
         m = (mask == tissue_pixel_value).astype("uint8")
         if np.max(m) <= 1:
@@ -355,7 +369,9 @@ class WholeSlideImage(object):
         scale = tiling_params.spacing / self.get_level_spacing(0)
         tile_size_lv0 = int(tiling_params.tile_size * scale)
 
-        contours, holes = self.detect_contours(tiling_params.spacing, tiling_params.tolerance, filter_params)
+        contours, holes = self.detect_contours(
+            tiling_params.spacing, tiling_params.tolerance, filter_params
+        )
         (
             running_x_coords,
             running_y_coords,
@@ -520,7 +536,9 @@ class WholeSlideImage(object):
         return 0
 
     @staticmethod
-    def isInContours(cont_check_fn, pt, drop_holes: bool, tile_size: int, holes: list | None = None):
+    def isInContours(
+        cont_check_fn, pt, drop_holes: bool, tile_size: int, holes: list | None = None
+    ):
         """
         Determines whether a given tile is within contours (and optionally outside of holes).
 
@@ -713,7 +731,9 @@ class WholeSlideImage(object):
                 - tile_level (int): Level of the image used for tile extraction.
                 - resize_factor (float): The factor by which the tile size was resized.
         """
-        tile_level, is_within_tolerance = self.get_best_level_for_spacing(spacing, tolerance, verbose=True)
+        tile_level, is_within_tolerance = self.get_best_level_for_spacing(
+            spacing, tolerance, verbose=True
+        )
         tile_spacing = self.get_level_spacing(tile_level)
         resize_factor = spacing / tile_spacing
         if is_within_tolerance:

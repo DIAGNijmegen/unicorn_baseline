@@ -20,13 +20,20 @@ class Titan(PreTrainedModel):
         model, eval_transform = build_conch(self.conch_config, model_dir)
         return model, eval_transform
 
-    def encode_slide_from_patch_features(self, patch_features: torch.Tensor, patch_coords: torch.Tensor, patch_size_lv0: int) -> torch.Tensor:
-        '''
+    def encode_slide_from_patch_features(
+        self,
+        patch_features: torch.Tensor,
+        patch_coords: torch.Tensor,
+        patch_size_lv0: int,
+    ) -> torch.Tensor:
+        """
         encode whole-slide image using patch features
         Args:
             patch_features: torch.Tensor, shape (1, N, C)
             patch_coords: torch.Tensor, shape (1, N, 2)
             patch_size_lv0: int, patch size at level 0 (1024 if slide is 40x, 512 if slide is 20x)
-        '''
-        slide_embedding = self.vision_encoder(patch_features, patch_coords, patch_size_lv0, no_proj=True)
+        """
+        slide_embedding = self.vision_encoder(
+            patch_features, patch_coords, patch_size_lv0, no_proj=True
+        )
         return slide_embedding

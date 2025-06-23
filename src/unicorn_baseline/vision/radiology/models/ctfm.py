@@ -18,17 +18,13 @@ def load_model(model_path):
     return SegResNet.from_pretrained(model_path)
 
 
-def load_data(data): 
-    train_transforms = Compose([ 
-        EnsureType(),                         
-        ScaleIntensityRange(
-            a_min=-1024,    
-            a_max=2048,    
-            b_min=0,        
-            b_max=1,        
-            clip=True       
-        ),
-     ])
+def load_data(data):
+    train_transforms = Compose(
+        [
+            EnsureType(),
+            ScaleIntensityRange(a_min=-1024, a_max=2048, b_min=0, b_max=1, clip=True),
+        ]
+    )
 
     train_ds = Dataset(data=data, transform=train_transforms)
     train_loader = DataLoader(train_ds, batch_size=1, shuffle=False)

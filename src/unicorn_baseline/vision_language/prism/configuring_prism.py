@@ -20,7 +20,7 @@ class PerceiverConfig(PretrainedConfig):
         share_tf_start_layer: int = 0,
         xattn_heads: int = 1,
         mlp_mult: int = 1,
-        mlp_activation: str = 'geglu',
+        mlp_activation: str = "geglu",
         **kwargs: Any,
     ):
         self.latent_seq = latent_seq

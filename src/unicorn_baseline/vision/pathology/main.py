@@ -13,7 +13,11 @@ from PIL import Image
 from unicorn_baseline.io import resolve_image_path, write_json_file
 from unicorn_baseline.vision.pathology.feature_extraction import extract_features
 from unicorn_baseline.vision.pathology.models import PRISM, Virchow
-from unicorn_baseline.vision.pathology.wsi import TilingParams, FilterParams, WholeSlideImage
+from unicorn_baseline.vision.pathology.wsi import (
+    TilingParams,
+    FilterParams,
+    WholeSlideImage,
+)
 
 
 def extract_coordinates(
@@ -59,12 +63,17 @@ def extract_coordinates(
     )
 
     image_spacings = wsi.spacings[0]
-    required_level, _ = wsi.get_best_level_for_spacing(tiling_params.spacing, tiling_params.tolerance)
+    required_level, _ = wsi.get_best_level_for_spacing(
+        tiling_params.spacing, tiling_params.tolerance
+    )
     image_size = wsi.level_dimensions[required_level]
 
     # sort coordinates by tissue percentage
     sorted_coordinates, sorted_tissue_percentages = select_coordinates_with_tissue(
-        coordinates=coordinates, tissue_percentages=tissue_percentages, max_number_of_tiles=max_number_of_tiles, seed=seed
+        coordinates=coordinates,
+        tissue_percentages=tissue_percentages,
+        max_number_of_tiles=max_number_of_tiles,
+        seed=seed,
     )
 
     return (
@@ -174,7 +183,11 @@ def select_coordinates_with_tissue(
     """
 
     # separate perfect tissue tiles
-    perfect = [(coord, perc) for coord, perc in zip(coordinates, tissue_percentages) if perc == 1.0]
+    perfect = [
+        (coord, perc)
+        for coord, perc in zip(coordinates, tissue_percentages)
+        if perc == 1.0
+    ]
     if max_number_of_tiles is not None and len(perfect) > max_number_of_tiles:
         rng = random.Random(seed)
         selected = rng.sample(perfect, max_number_of_tiles)
@@ -217,7 +230,14 @@ def save_tile_mp(args):
     coord, wsi_path, spacing, tile_size, resize_factor, tile_dir, tile_format = args
     x, y = coord
     return save_tile(
-        x=x, y=y, wsi_path=wsi_path, spacing=spacing, tile_size=tile_size, resize_factor=resize_factor, save_dir=tile_dir, tile_format=tile_format
+        x=x,
+        y=y,
+        wsi_path=wsi_path,
+        spacing=spacing,
+        tile_size=tile_size,
+        resize_factor=resize_factor,
+        save_dir=tile_dir,
+        tile_format=tile_format,
     )
 
 
@@ -285,23 +305,31 @@ def save_feature_to_json(
         patches = []
 
         features_np = feature.cpu().numpy()
-        
+
         for coord, feat in zip(coordinates, features_np):
 
             # check if feature is 2D (patch tokens) or 1D (CLS token)
             if len(feat.shape) == 2:  # 2D: [num_patch_tokens, embedding_dim]
-                patches.extend([
-                    {
-                        "coordinates": [int(coord[0]), int(coord[1]), int(token_idx)],
-                        "features": feat[token_idx].tolist(),
-                    }
-                    for token_idx in range(feat.shape[0])
-                ])
+                patches.extend(
+                    [
+                        {
+                            "coordinates": [
+                                int(coord[0]),
+                                int(coord[1]),
+                                int(token_idx),
+                            ],
+                            "features": feat[token_idx].tolist(),
+                        }
+                        for token_idx in range(feat.shape[0])
+                    ]
+                )
             else:  # 1D: [embedding_dim]
-                patches.append({
-                    "coordinates": [int(coord[0]), int(coord[1])],
-                    "features": feat.tolist(),
-                })
+                patches.append(
+                    {
+                        "coordinates": [int(coord[0]), int(coord[1])],
+                        "features": feat.tolist(),
+                    }
+                )
 
         output_dict = [
             {
@@ -334,7 +362,7 @@ def run_pathology_vision_task(
     task_name: str,
     task_type: str,
     input_information: dict[str, Any],
-    model_dir: Path
+    model_dir: Path,
 ):
     tissue_mask_path = None
     for input_socket in input_information:
@@ -342,7 +370,9 @@ def run_pathology_vision_task(
             image_title = input_socket["image"]["pk"]
             wsi_path = resolve_image_path(location=input_socket["input_location"])
         elif input_socket["interface"]["kind"] == "Segmentation":
-            tissue_mask_path = resolve_image_path(location=input_socket["input_location"])
+            tissue_mask_path = resolve_image_path(
+                location=input_socket["input_location"]
+            )
 
     batch_size = 32
     use_mixed_precision = True
@@ -356,17 +386,41 @@ def run_pathology_vision_task(
 
     # coonfigurations for tile extraction based on tasks
     clf_config = {
-        "tiling_params": TilingParams(spacing=0.5, tolerance=0.07, tile_size=224, overlap=0.0, drop_holes=False, min_tissue_ratio=0.25, use_padding=True),
+        "tiling_params": TilingParams(
+            spacing=0.5,
+            tolerance=0.07,
+            tile_size=224,
+            overlap=0.0,
+            drop_holes=False,
+            min_tissue_ratio=0.25,
+            use_padding=True,
+        ),
         "filter_params": FilterParams(ref_tile_size=224, a_t=4, a_h=2, max_n_holes=8),
     }
 
     detection_config = {
-            "tiling_params": TilingParams(spacing=0.5, tolerance=0.07, tile_size=224, overlap=0, drop_holes=False, min_tissue_ratio=0.1, use_padding=True),
-            "filter_params": FilterParams(ref_tile_size=64, a_t=1, a_h=1, max_n_holes=8),
-        }
+        "tiling_params": TilingParams(
+            spacing=0.5,
+            tolerance=0.07,
+            tile_size=224,
+            overlap=0,
+            drop_holes=False,
+            min_tissue_ratio=0.1,
+            use_padding=True,
+        ),
+        "filter_params": FilterParams(ref_tile_size=64, a_t=1, a_h=1, max_n_holes=8),
+    }
 
     segmentation_config = {
-        "tiling_params": TilingParams(spacing=0.5, tolerance=0.07, tile_size=224, overlap=0, drop_holes=False, min_tissue_ratio=0.1, use_padding=True),
+        "tiling_params": TilingParams(
+            spacing=0.5,
+            tolerance=0.07,
+            tile_size=224,
+            overlap=0,
+            drop_holes=False,
+            min_tissue_ratio=0.1,
+            use_padding=True,
+        ),
         "filter_params": FilterParams(ref_tile_size=64, a_t=1, a_h=1, max_n_holes=8),
     }
 
@@ -374,7 +428,7 @@ def run_pathology_vision_task(
         "classification": clf_config,
         "regression": clf_config,
         "detection": detection_config,
-        "segmentation": segmentation_config
+        "segmentation": segmentation_config,
     }
 
     config = task_configs[task_type]
@@ -422,11 +476,11 @@ def run_pathology_vision_task(
         )
 
     print("=+=" * 10)
-    
+
     if task_type in ["classification", "regression"]:
         feature_extractor = PRISM(model_dir)
     elif task_type in ["detection", "segmentation"]:
-        feature_extractor = Virchow(model_dir, mode='patch_tokens')
+        feature_extractor = Virchow(model_dir, mode="patch_tokens")
 
     # Extract tile or slide features
     feature = extract_features(
@@ -446,7 +500,11 @@ def run_pathology_vision_task(
     if task_type in ["classification", "regression"]:
         save_feature_to_json(feature=feature, task_type=task_type, title=image_title)
     elif task_type in ["detection", "segmentation"]:
-        tile_size = [config["tiling_params"].tile_size, config["tiling_params"].tile_size, 3]
+        tile_size = [
+            config["tiling_params"].tile_size,
+            config["tiling_params"].tile_size,
+            3,
+        ]
 
         save_feature_to_json(
             feature=feature,

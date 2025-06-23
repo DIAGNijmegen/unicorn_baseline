@@ -3,6 +3,7 @@ from typing import Any
 
 from transformers import PretrainedConfig
 
+
 class ConchConfig(PretrainedConfig):
     model_type = "conch"
 
@@ -31,20 +32,21 @@ class ConchConfig(PretrainedConfig):
 
         super().__init__(**kwargs)
 
+
 class TitanVisionConfig(PretrainedConfig):
     model_type = "titan_vision"
 
     def __init__(
         self,
-        grid_size: int =14,
-        global_pool: str ='token',
+        grid_size: int = 14,
+        global_pool: str = "token",
         embed_dim: int = 768,
         depth: int = 6,
         num_heads: int = 12,
-        mlp_ratio: float = 4.,
+        mlp_ratio: float = 4.0,
         qkv_bias: bool = True,
-        mlp_patch_embed_dim: int =768,
-        pos_encode_type: str ='alibi',
+        mlp_patch_embed_dim: int = 768,
+        pos_encode_type: str = "alibi",
         #### CoCa params ####
         attentional_pool: str = None,
         attn_pooler_queries: int = 128,
@@ -66,6 +68,7 @@ class TitanVisionConfig(PretrainedConfig):
 
         super().__init__(**kwargs)
 
+
 class TitanTextConfig(PretrainedConfig):
     model_type = "titan_text"
 
@@ -74,14 +77,13 @@ class TitanTextConfig(PretrainedConfig):
         embed_dim: int = 768,
         context_length: int = 128,
         vocab_size: int = 32007,
-
         width: int = 768,
         heads: int = 12,
         layers: int = 12,
         mlp_ratio: float = 4.0,
         embed_cls: bool = True,
         pad_id: int = 0,
-        pool_type: str = 'argmax',
+        pool_type: str = "argmax",
         proj_bias: bool = False,
         output_tokens: bool = True,
         **kwargs: Any,
@@ -101,6 +103,7 @@ class TitanTextConfig(PretrainedConfig):
         self.output_tokens = output_tokens
 
         super().__init__(**kwargs)
+
 
 class TitanConfig(PretrainedConfig):
     model_type = "titan"

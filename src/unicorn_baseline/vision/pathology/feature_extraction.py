@@ -55,9 +55,7 @@ def aggregate_slide_features(
         autocast_context = torch.autocast(device_type="cuda", dtype=torch.float16)
     with torch.inference_mode():
         with autocast_context:
-            wsi_feature = model.forward_slide(
-                tile_features
-            )
+            wsi_feature = model.forward_slide(tile_features)
     return wsi_feature.squeeze(0).cpu().tolist()
 
 
@@ -89,7 +87,10 @@ def extract_features(
         )
     else:
         dataset = TileDataset(
-            wsi_path, coordinates_dir=coordinates_dir, backend=backend, transforms=transforms
+            wsi_path,
+            coordinates_dir=coordinates_dir,
+            backend=backend,
+            transforms=transforms,
         )
 
     dataloader = torch.utils.data.DataLoader(
@@ -107,7 +108,11 @@ def extract_features(
     if task_type in ["classification", "regression"]:
         # aggregate to a single slide-level feature
         slide_feature = aggregate_slide_features(
-            model=model, tile_features=tile_features, dataset=dataset, device=model.device, use_mixed_precision=use_mixed_precision
+            model=model,
+            tile_features=tile_features,
+            dataset=dataset,
+            device=model.device,
+            use_mixed_precision=use_mixed_precision,
         )
         return slide_feature
     else:

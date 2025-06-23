@@ -24,8 +24,8 @@ class BioGPT(nn.Module):
 
         self.model = BioGptForCausalLM(config, x_attn_dim=context_dim)
 
-        commit_hash = 'eb0d815e95434dc9e3b78f464e52b899bee7d923'
-        tokenizer_weights = model_dir / 'biogpt'
+        commit_hash = "eb0d815e95434dc9e3b78f464e52b899bee7d923"
+        tokenizer_weights = model_dir / "biogpt"
         self.tokenizer = enforce_type(
             BioGptTokenizer,
             BioGptTokenizer.from_pretrained(tokenizer_weights, revision=commit_hash),
@@ -40,18 +40,18 @@ class BioGPT(nn.Module):
         # see https://huggingface.co/microsoft/biogpt/raw/main/vocab.json
         self.cls_token_id = 42383
         # init to random weight from the same distribution as original embeddings init
-        enforce_type(Tensor, self.model.biogpt.embed_tokens.weight)[self.cls_token_id].data.normal_(
-            mean=0.0, std=self.model.config.initializer_range
-        )
+        enforce_type(Tensor, self.model.biogpt.embed_tokens.weight)[
+            self.cls_token_id
+        ].data.normal_(mean=0.0, std=self.model.config.initializer_range)
 
         if frozen_weights:
             for name, param in self.model.named_parameters():
-                if not any(c in name for c in ['embed_tokens', 'x_attn']):
+                if not any(c in name for c in ["embed_tokens", "x_attn"]):
                     param.requires_grad = False
 
         if frozen_embeddings:
             for name, param in self.model.named_parameters():
-                if 'embed_tokens' in name:
+                if "embed_tokens" in name:
                     param.requires_grad = False
 
     @property
@@ -75,7 +75,7 @@ class BioGPT(nn.Module):
             text=text,
             add_special_tokens=True,
             padding=True,
-            return_tensors='pt',
+            return_tensors="pt",
             return_token_type_ids=False,
             return_attention_mask=False,
         )
@@ -83,7 +83,7 @@ class BioGPT(nn.Module):
         # example:
         # "</s>Squamous mucosa indicative of reflux esophagitis. </s>"
         # [    2, 21477,  2626,  7265,     5,  4532, 13893,     4,     2]
-        text_token_ids = enforce_type(Tensor, text_tokenised['input_ids'])
+        text_token_ids = enforce_type(Tensor, text_tokenised["input_ids"])
         return text_token_ids
 
     def untokenize(self, token_ids: Tensor) -> list[str]:
@@ -166,21 +166,21 @@ class BioGPT(nn.Module):
         )
 
         # remove multimodal cls token
-        logits = output['logits'][:, :-1]
+        logits = output["logits"][:, :-1]
 
         # take unimodal cls token from the last unimodal layer
         last_unimodal_layer = self.model.biogpt.first_x_attn_layer - 1
         # NOTE: `+ 1` accounts for the 0th entry in hidden_states being
         # not a layer output but text embeddings
-        text_cls_embedding = output['hidden_states'][last_unimodal_layer + 1][:, -1]
+        text_cls_embedding = output["hidden_states"][last_unimodal_layer + 1][:, -1]
 
-        return {'logits': logits, 'text_embedding': text_cls_embedding}
+        return {"logits": logits, "text_embedding": text_cls_embedding}
 
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def enforce_type(t: Type[T], o: Any) -> T:
     if not isinstance(o, t):
-        raise TypeError(f'{type(o)=} != t')
+        raise TypeError(f"{type(o)=} != t")
     return o

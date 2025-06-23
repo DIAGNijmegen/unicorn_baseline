@@ -56,7 +56,7 @@ class PRISM(nn.Module):
         embeddings = embeddings.to(self.device)
 
         reprs = self.slide_encoder.slide_representations(embeddings)
-       
+
         genned_ids = self.slide_encoder.generate(
             key_value_states=reprs["image_latents"],
             do_sample=False,

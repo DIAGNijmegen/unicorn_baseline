@@ -15,8 +15,9 @@
 import torch
 import torch.nn as nn
 import timm
-import safetensors.torch  
+import safetensors.torch
 import os
+
 
 class SmallDINOv2(nn.Module):
     def __init__(self, model_dir, use_safetensors=True):
@@ -31,13 +32,15 @@ class SmallDINOv2(nn.Module):
 
         # Load DINOv2 model architecture from timm
         self.model = timm.create_model(
-            'vit_small_patch14_dinov2.lvd142m',
+            "vit_small_patch14_dinov2.lvd142m",
             pretrained=False,  # Do not download weights online
-            num_classes=0  # Remove classifier
+            num_classes=0,  # Remove classifier
         )
 
         # Determine which weight file to use
-        weights_path = os.path.join(model_dir, "model.safetensors" if use_safetensors else "pytorch_model.bin")
+        weights_path = os.path.join(
+            model_dir, "model.safetensors" if use_safetensors else "pytorch_model.bin"
+        )
         if not os.path.exists(weights_path):
             raise FileNotFoundError(f"Model weights not found in {weights_path}")
 
@@ -53,19 +56,19 @@ class SmallDINOv2(nn.Module):
 
         # Freeze all parameters (acts as a fixed feature extractor)
         for param in self.model.parameters():
-            param.requires_grad = False  
+            param.requires_grad = False
 
     def forward(self, x):
         """
         Extracts patch-level features using DINOv2.
-        
+
         Args:
             x (torch.Tensor): Input tensor of shape [B, 3, H, W] (single patch at a time).
-        
+
         Returns:
             torch.Tensor: Extracted CLS token features [B, 384].
         """
         features = self.model.forward_features(x)  # Extract raw features
-        
+
         # CLS token is usually at index 0 in ViT outputs
         return features[:, 0, :]  # Extract the CLS token representation
