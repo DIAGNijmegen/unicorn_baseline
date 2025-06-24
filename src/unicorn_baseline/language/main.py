@@ -12,12 +12,16 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+
 import json
+import os
+import random
 import time
 from pathlib import Path
 from typing import List
 
 import pandas as pd
+import tiktoken
 from dragon_baseline.main import DragonBaseline
 from llm_extractinator import extractinate
 
@@ -114,53 +118,78 @@ def generate_task_file(config: DragonBaseline, task_folder: Path):
 def post_process_predictions(data: json, task_config: DragonBaseline):
     task_id = task_config.jobid
     prediction_name = task_config.target.prediction_name
+
+    def safe_float(val, default=0.0):
+        try:
+            return float(val)
+        except (ValueError, TypeError):
+            return default
+
+    def safe_bool_to_float(val):
+        return 1.0 if val in ["True", True] else 0.0
+
     if prediction_name in (
         "single_label_binary_classification",
         "single_label_regression",
     ):
         for example in data:
-            example[prediction_name] = float(example[prediction_name])
+            example[prediction_name] = safe_float(example.get(prediction_name, 0.0))
+
     if task_id == 15:
         for example in data:
-            example[prediction_name] = [
-                example.pop("left"),
-                example.pop("right"),
-            ]
+            left = example.pop("left", "")
+            right = example.pop("right", "")
+            if not isinstance(left, str):
+                left = ""
+            if not isinstance(right, str):
+                right = ""
+            example[prediction_name] = [left, right]
+
     elif task_id == 16:
+        keys = [
+            "biopsy",
+            "cancer",
+            "high_grade_dysplasia",
+            "hyperplastic_polyps",
+            "low_grade_dysplasia",
+            "non_informative",
+            "serrated_polyps",
+        ]
         for example in data:
-            keys = [
-                "biopsy",
-                "cancer",
-                "high_grade_dysplasia",
-                "hyperplastic_polyps",
-                "low_grade_dysplasia",
-                "non_informative",
-                "serrated_polyps",
-            ]
-            example[prediction_name] = [
-                1.0 if example.pop(key) in ["True", True] else 0.0 for key in keys
-            ]
+            values = []
+            for key in keys:
+                val = example.pop(key, False)
+                values.append(safe_bool_to_float(val))
+            example[prediction_name] = values
+
     elif task_id == 17:
         for example in data:
-            example[prediction_name] = [
-                float(example.pop("lesion_1")),
-                float(example.pop("lesion_2")),
-                float(example.pop("lesion_3")),
-                float(example.pop("lesion_4")),
-                float(example.pop("lesion_5")),
-            ]
+            lesion_values = []
+            for i in range(1, 6):
+                key = f"lesion_{i}"
+                lesion_values.append(safe_float(example.pop(key, 0.0)))
+            example[prediction_name] = lesion_values
+
     elif task_id == 18:
+        keys = ["prostate_volume", "PSA_level", "PSA_density"]
         for example in data:
-            example[prediction_name] = [
-                float(example.pop("prostate_volume")),
-                float(example.pop("PSA_level")),
-                float(example.pop("PSA_density")),
-            ]
+            values = [safe_float(example.pop(key, 0.0)) for key in keys]
+            example[prediction_name] = values
+
     data = drop_keys_except(data, ["uid", prediction_name])
     return data
 
 
 def run_language(OUTPUT_PATH: Path) -> int:
+    # Make sure tiktoken can cache its data
+    tiktoken_cache_dir = "/opt/tiktoken_cache"
+    os.environ["TIKTOKEN_CACHE_DIR"] = tiktoken_cache_dir
+
+    print("Checking tiktoken...")
+    encoding = tiktoken.get_encoding("cl100k_base")
+    encoding.encode("Hello, world")
+    print("Tiktoken is working!")
+
     # Read the task configuration, few-shots and test data
     # We'll leverage the DRAGON baseline algorithm for this
     algorithm = DragonBaseline()

@@ -9,8 +9,8 @@ RUN groupadd --gid ${USER_GID} user \
     && useradd -m --no-log-init --uid ${USER_UID} --gid ${USER_GID} user
 
 # create input/output directory
-RUN mkdir -p /input /output /opt/app/workdir/language && \
-    chown -R user:user /input /output /opt/app/workdir/language
+RUN mkdir -p /input /output /opt/app/workdir/language /opt/tiktoken_cache && \
+    chown -R user:user /input /output /opt/app/workdir/language /opt/tiktoken_cache
 
 # Ensures that Python output to stdout/stderr is not buffered: prevents missing information when terminating
 ENV PYTHONUNBUFFERED=1
@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libtiff-dev \
     zlib1g-dev \
     curl \
+    wget \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -60,6 +61,12 @@ RUN python -m pip install \
     --no-color \
     --requirement /opt/app/requirements.in \
     && rm -rf /home/user/.cache/pip
+
+# Cache tiktoken
+ENV TIKTOKEN_CACHE_DIR=/opt/tiktoken_cache
+RUN pip install --upgrade tiktoken
+ARG TIKTOKEN_URL="https://openaipublic.blob.core.windows.net/encodings/cl100k_base.tiktoken"
+RUN wget -O /opt/tiktoken_cache/$(echo -n $TIKTOKEN_URL | sha1sum | head -c 40) $TIKTOKEN_URL
 
 # install UNICORN baseline
 COPY --chown=user:user src /opt/app/unicorn_baseline/src

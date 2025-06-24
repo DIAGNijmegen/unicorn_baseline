@@ -165,21 +165,21 @@ TASK_DEFINITIONS = {
         "Task": "Predicting prostate volume, PSA, and PSA density",
         "Type": "Regression",
         "Description": (
-            "The goal is to predict the prostate volume (in cm3), PSA level (in ng/ml) and PSA density (in ng/ml/ml) based on the radiology report. When a value is not explicitly stated, it should be denoted as 'NaN'. When dimensions are given (e.g., “3 x 4 x 5 mm”), we used the ellipsoid formula to calculate the volume (π*l*w*h/6), with l, w, and h the spatial dimensions in mm. When a range is given (e.g., “PSA: 4-5”), provide the average (i.e., 4.5)."
+            "The goal is to predict the prostate volume (in cm3), PSA level (in ng/ml) and PSA density (in ng/ml/ml) based on the radiology report. When a value is not explicitly stated, it should be denoted as 0.0. When dimensions are given (e.g., “3 x 4 x 5 mm”), we used the ellipsoid formula to calculate the volume (π*l*w*h/6), with l, w, and h the spatial dimensions in mm. When a range is given (e.g., “PSA: 4-5”), provide the average (i.e., 4.5)."
         ),
         "Parser_Format": {
             "prostate_volume": {
                 "type": "float",
-                "description": "The estimated prostate volume in cm3, or NaN if not described.",
+                "description": "The estimated prostate volume in cm3, or 0.0 if not described.",
             },
             "PSA_level": {
                 "type": "float",
-                "description": ("The PSA level in ng/ml, or NaN if not described."),
+                "description": ("The PSA level in ng/ml, or 0.0 if not described."),
             },
             "PSA_density": {
                 "type": "float",
                 "description": (
-                    "The PSA density in ng/ml/cm3, or NaN if not described."
+                    "The PSA density in ng/ml/cm3, or 0.0 if not described."
                 ),
             },
         },
