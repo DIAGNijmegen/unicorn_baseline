@@ -234,6 +234,7 @@ def run_radiology_vision_task(
                     model_dir=model_dir,
                     domain=domain,
                     title=image_input["interface"]["slug"],
+                    patch_size = [16, 64, 64],
                 )
                 neural_representations.append(neural_representation)
 
@@ -248,6 +249,7 @@ def run_radiology_vision_task(
                     model_dir=model_dir,
                     domain=domain,
                     title=image_input["interface"]["slug"],
+                    patch_size = [16, 128, 128],
                 )
                 neural_representations.append(neural_representation)
 
