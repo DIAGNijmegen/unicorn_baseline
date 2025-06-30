@@ -88,7 +88,7 @@ def extract_features_segmentation(
         image = sitk.DICOMOrient(image, desiredCoordinateOrientation="LPS")
 
     print(f"Extracting patches from image")
-    patches, coordinates = extract_patches(
+    patches, coordinates, image = extract_patches(
         image=image,
         patch_size=patch_size,
         spacing=patch_spacing,

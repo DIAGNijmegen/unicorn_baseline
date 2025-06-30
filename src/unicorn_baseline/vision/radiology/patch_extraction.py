@@ -87,4 +87,4 @@ def extract_patches(
         )
         coordinates.append(world_coordinates)
 
-    return patches, coordinates
+    return patches, coordinates, image
