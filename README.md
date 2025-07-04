@@ -1,4 +1,4 @@
-# UNICORN Basline 🦄
+# UNICORN Baseline 🦄
 
 Welcome to the official baseline repository for the [UNICORN challenge](https://unicorn.grand-challenge.org/)!<br>
 This repository provides reference implementations and tools for tackling a wide range of vision, language, and vision-language tasks in computational pathology and radiology.
